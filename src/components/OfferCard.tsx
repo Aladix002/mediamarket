@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Offer, OfferTag } from '@/data/mockData';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Calendar, Tag } from 'lucide-react';
 
 interface OfferCardProps {
   offer: Offer;
+  blurPrice?: boolean;
 }
 
 const tagLabels: Record<OfferTag, string> = {
@@ -24,10 +26,12 @@ const mediaTypeLabels: Record<string, string> = {
   rádio: 'Rádio',
   OOH: 'OOH',
   print: 'Print',
-  newsletter: 'Newsletter',
+  'sociální sítě': 'Sociální sítě',
+  video: 'Video',
+  influenceři: 'Influenceři',
 };
 
-const OfferCard = ({ offer }: OfferCardProps) => {
+const OfferCard = ({ offer, blurPrice = false }: OfferCardProps) => {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
@@ -61,7 +65,7 @@ const OfferCard = ({ offer }: OfferCardProps) => {
         {/* Media info */}
         <div className="flex items-center gap-2 mb-2">
           <Badge variant="secondary" className="text-xs">
-            {mediaTypeLabels[offer.mediaType]}
+            {mediaTypeLabels[offer.mediaType] || offer.mediaType}
           </Badge>
           <span className="text-xs text-muted-foreground">{offer.mediaName}</span>
         </div>
@@ -86,7 +90,7 @@ const OfferCard = ({ offer }: OfferCardProps) => {
         <div className="flex items-end justify-between pt-3 border-t mt-auto">
           <div>
             <p className="text-xs text-muted-foreground">Cena od</p>
-            <p className="font-display font-bold text-lg text-primary">
+            <p className={`font-display font-bold text-lg text-primary ${blurPrice ? 'blur-sm select-none' : ''}`}>
               {formatPrice(offer.priceFrom)}
             </p>
           </div>
@@ -100,6 +104,11 @@ const OfferCard = ({ offer }: OfferCardProps) => {
             </p>
           </div>
         </div>
+
+        {/* Detail button */}
+        <Button variant="outline" size="sm" className="w-full mt-4">
+          Detail nabídky
+        </Button>
       </article>
     </Link>
   );
