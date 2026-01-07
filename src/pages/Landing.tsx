@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import OfferCard from '@/components/OfferCard';
 import { mockOffers } from '@/data/mockData';
 import { useApp } from '@/contexts/AppContext';
@@ -16,25 +15,22 @@ const Landing = () => {
       <section className="gradient-hero text-primary-foreground py-20 md:py-28">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <Badge className="mb-6 bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 hover:bg-primary-foreground/30">
-              Beta verze
-            </Badge>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Mediální prostor za speciální ceny
+              Akční a speciální nabídky mediálního prostoru na jednom místě
             </h1>
             <p className="text-lg md:text-xl opacity-90 mb-10 max-w-2xl mx-auto">
-              Marketplace pro akční nabídky reklamního prostoru. Spojujeme média s agenturami.
+              Marketplace pro média a agentury. Formáty a ceny přehledně bez chaosu v emailech
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to={role === 'visitor' ? '/auth' : '/media'}>
                 <Button size="lg" className="btn-hero-secondary w-full sm:w-auto">
-                  Jsem médium
+                  Nabízím mediální prostor
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link to="/offers">
                 <Button size="lg" className="btn-hero-primary w-full sm:w-auto bg-primary-foreground text-primary hover:bg-primary-foreground/90">
-                  Jsem agentura
+                  Hledám nabídky pro klienty
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -52,27 +48,27 @@ const Landing = () => {
               <div className="w-14 h-14 rounded-xl gradient-hero flex items-center justify-center mx-auto mb-4">
                 <Zap className="w-7 h-7 text-primary-foreground" />
               </div>
-              <h3 className="font-display font-semibold text-lg mb-2">Procházejte nabídky</h3>
+              <h3 className="font-display font-semibold text-lg mb-2">Médium vloží nabídku</h3>
               <p className="text-muted-foreground text-sm">
-                Filtrujte podle typu média, formátu a ceny. Najděte přesně to, co hledáte.
+                Akční plochy, last minute termíny, speciální balíčky – vše přehledně a rychle
               </p>
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-xl gradient-hero flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="w-7 h-7 text-primary-foreground" />
               </div>
-              <h3 className="font-display font-semibold text-lg mb-2">Poptejte prostor</h3>
+              <h3 className="font-display font-semibold text-lg mb-2">Agentura vybírá a poptává</h3>
               <p className="text-muted-foreground text-sm">
-                Vyplňte jednoduchý poptávkový formulář a popište své požadavky.
+                Procházíte nabídky, filtrujete podle typu, termínu i ceny, poptáte jedním klikem
               </p>
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-xl gradient-hero flex items-center justify-center mx-auto mb-4">
                 <Handshake className="w-7 h-7 text-primary-foreground" />
               </div>
-              <h3 className="font-display font-semibold text-lg mb-2">Domluvte se přímo</h3>
+              <h3 className="font-display font-semibold text-lg mb-2">Dohoda přímo mezi vámi</h3>
               <p className="text-muted-foreground text-sm">
-                Médium vás kontaktuje s konkrétní nabídkou. Žádní prostředníci.
+                Žádný prostředník, žádné provize – vy si domluvíte finální podmínky
               </p>
             </div>
           </div>
@@ -128,7 +124,7 @@ const Landing = () => {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {featuredOffers.map((offer) => (
-              <OfferCard key={offer.id} offer={offer} />
+              <OfferCard key={offer.id} offer={offer} blurPrice />
             ))}
           </div>
         </div>

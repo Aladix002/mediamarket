@@ -33,7 +33,9 @@ const mediaTypeLabels: Record<string, string> = {
   rádio: 'Rádio',
   OOH: 'OOH',
   print: 'Print',
-  newsletter: 'Newsletter',
+  'sociální sítě': 'Sociální sítě',
+  video: 'Video',
+  influenceři: 'Influenceři',
 };
 
 const OfferDetail = () => {
@@ -215,7 +217,7 @@ const OfferDetail = () => {
                 className="w-full"
                 onClick={() => setInquiryOpen(true)}
               >
-                Nezávazně poptat
+                Objednat
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
