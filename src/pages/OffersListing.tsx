@@ -22,6 +22,7 @@ const sortOptions = [
   { value: 'newest', label: 'Nejnovější' },
   { value: 'cheapest', label: 'Nejlevnější' },
   { value: 'ends-soon', label: 'Končí nejdřív' },
+  { value: 'biggest-discount', label: 'Největší sleva' },
   { value: 'most-inquired', label: 'Nejvíc poptávané' },
 ];
 
@@ -32,15 +33,32 @@ const tagFilters: { value: OfferTag | 'all'; label: string }[] = [
   { value: 'last-minute', label: 'Last minute' },
 ];
 
+const discountFilters: { value: string; label: string; min: number; max: number }[] = [
+  { value: '0-10', label: '0–10 %', min: 0, max: 10 },
+  { value: '11-25', label: '11–25 %', min: 11, max: 25 },
+  { value: '26-40', label: '26–40 %', min: 26, max: 40 },
+  { value: '41-60', label: '41–60 %', min: 41, max: 60 },
+  { value: '61-100', label: '61–100 %', min: 61, max: 100 },
+];
+
 const OffersListing = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [mediaTypeFilter, setMediaTypeFilter] = useState<MediaType | 'all'>('all');
   const [publisherFilter, setPublisherFilter] = useState<Publisher | 'all'>('all');
   const [tagFilter, setTagFilter] = useState<OfferTag | 'all'>('all');
+  const [discountFilter, setDiscountFilter] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
 
   const publishedOffers = mockOffers.filter(o => o.status === 'published');
+
+  const toggleDiscountFilter = (value: string) => {
+    setDiscountFilter(prev => 
+      prev.includes(value) 
+        ? prev.filter(v => v !== value)
+        : [...prev, value]
+    );
+  };
 
   const filteredOffers = useMemo(() => {
     let result = [...publishedOffers];
@@ -72,6 +90,17 @@ const OffersListing = () => {
       result = result.filter((o) => o.tags.includes(tagFilter));
     }
 
+    // Discount filter
+    if (discountFilter.length > 0) {
+      result = result.filter((o) => {
+        return discountFilter.some((filterValue) => {
+          const filter = discountFilters.find(f => f.value === filterValue);
+          if (!filter) return false;
+          return o.discountPercent >= filter.min && o.discountPercent <= filter.max;
+        });
+      });
+    }
+
     // Sort
     switch (sortBy) {
       case 'cheapest':
@@ -79,6 +108,14 @@ const OffersListing = () => {
         break;
       case 'ends-soon':
         result.sort((a, b) => new Date(a.validTo).getTime() - new Date(b.validTo).getTime());
+        break;
+      case 'biggest-discount':
+        result.sort((a, b) => {
+          const discountDiff = b.discountPercent - a.discountPercent;
+          if (discountDiff !== 0) return discountDiff;
+          // Tie-breaker: newest first
+          return new Date(b.validFrom).getTime() - new Date(a.validFrom).getTime();
+        });
         break;
       case 'most-inquired':
         // Mock: just reverse order for demo
@@ -90,17 +127,18 @@ const OffersListing = () => {
     }
 
     return result;
-  }, [publishedOffers, searchQuery, mediaTypeFilter, publisherFilter, tagFilter, sortBy]);
+  }, [publishedOffers, searchQuery, mediaTypeFilter, publisherFilter, tagFilter, discountFilter, sortBy]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setMediaTypeFilter('all');
     setPublisherFilter('all');
     setTagFilter('all');
+    setDiscountFilter([]);
     setSortBy('newest');
   };
 
-  const hasActiveFilters = searchQuery || mediaTypeFilter !== 'all' || publisherFilter !== 'all' || tagFilter !== 'all';
+  const hasActiveFilters = searchQuery || mediaTypeFilter !== 'all' || publisherFilter !== 'all' || tagFilter !== 'all' || discountFilter.length > 0;
 
   return (
     <div className="min-h-screen bg-background py-8">
@@ -204,6 +242,22 @@ const OffersListing = () => {
                 Zrušit filtry
               </Button>
             )}
+          </div>
+
+          {/* Discount filter */}
+          <div className={`${showFilters ? 'block' : 'hidden sm:block'}`}>
+            <p className="text-sm text-muted-foreground mb-2">Sleva</p>
+            <div className="flex flex-wrap gap-2">
+              {discountFilters.map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => toggleDiscountFilter(filter.value)}
+                  className={`filter-chip ${discountFilter.includes(filter.value) ? 'filter-chip-active' : ''}`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -156,6 +156,12 @@ const OfferDetail = () => {
                   <dt className="text-sm text-muted-foreground">Platnost do</dt>
                   <dd className="font-medium">{formatDate(offer.validTo)}</dd>
                 </div>
+                {offer.discountPercent > 0 && (
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Sleva</dt>
+                    <dd className="font-medium text-destructive">{offer.discountPercent} %</dd>
+                  </div>
+                )}
               </dl>
             </div>
 
