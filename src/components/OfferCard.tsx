@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Offer, OfferTag } from '@/data/mockData';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Tag } from 'lucide-react';
+import { Calendar, Tag, Percent } from 'lucide-react';
 
 interface OfferCardProps {
   offer: Offer;
@@ -51,16 +51,21 @@ const OfferCard = ({ offer, blurPrice = false }: OfferCardProps) => {
   return (
     <Link to={`/offers/${offer.id}`} className="block">
       <article className="card-offer p-5 h-full flex flex-col">
-        {/* Tags */}
-        {offer.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {offer.tags.map((tag) => (
-              <Badge key={tag} variant="outline" className={`text-xs font-medium ${tagStyles[tag]}`}>
-                {tagLabels[tag]}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {/* Tags and Discount */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {/* Discount badge */}
+          {offer.discountPercent > 0 && (
+            <Badge className="bg-destructive text-destructive-foreground text-xs font-bold">
+              -{offer.discountPercent} %
+            </Badge>
+          )}
+          {/* Offer tags */}
+          {offer.tags.map((tag) => (
+            <Badge key={tag} variant="outline" className={`text-xs font-medium ${tagStyles[tag]}`}>
+              {tagLabels[tag]}
+            </Badge>
+          ))}
+        </div>
 
         {/* Media info */}
         <div className="flex items-center gap-2 mb-2">
