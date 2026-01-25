@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import OfferCard from '@/components/OfferCard';
 import { mockOffers } from '@/data/mockData';
 import { useApp } from '@/contexts/AppContext';
-import { ArrowRight, Zap, MessageSquare, Handshake, TrendingUp, Shield, Clock } from 'lucide-react';
+import { ArrowRight, Zap, MessageSquare, Handshake } from 'lucide-react';
+import PartnersTicker from '@/components/PartnersTicker';
 
 const Landing = () => {
   const { role } = useApp();
@@ -75,40 +76,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Benefits */}
-      <section className="py-16 md:py-24 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="flex items-start gap-4 p-5 rounded-xl bg-card border">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Speciální ceny</h3>
-                <p className="text-sm text-muted-foreground">Akční nabídky s výhodnými podmínkami</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 p-5 rounded-xl bg-card border">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                <Shield className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Ověřená média</h3>
-                <p className="text-sm text-muted-foreground">Pouze prověření partneři</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 p-5 rounded-xl bg-card border">
-              <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5 text-orange-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Rychlá reakce</h3>
-                <p className="text-sm text-muted-foreground">Odpověď do 48 hodin</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Partners Ticker */}
+      <PartnersTicker />
 
       {/* Featured Offers */}
       <section className="py-16 md:py-24 bg-card">

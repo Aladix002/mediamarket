@@ -187,4 +187,34 @@
   .filter-chip-active {
     @apply bg-primary text-primary-foreground border-primary;
   }
+
+  /* Partners ticker animation */
+  .ticker-animation {
+    animation: ticker-scroll 30s linear infinite;
+  }
+
+  .ticker-paused {
+    animation-play-state: paused;
+  }
+
+  @keyframes ticker-scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Respect reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-animation {
+      animation-duration: 120s;
+    }
+  }
+
+  /* Hide scrollbar for ticker */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
