@@ -32,6 +32,7 @@ export const mockMedia = [
 
 export type MediaType = 'online' | 'rádio' | 'OOH' | 'print' | 'sociální sítě' | 'video' | 'influenceři';
 export type OfferTag = 'akce' | 'speciál' | 'last-minute';
+export type OrderStatus = 'nová' | 'v řešení' | 'objednávka uzavřena';
 
 export interface Offer {
   id: string;
@@ -41,15 +42,25 @@ export interface Offer {
   mediaType: MediaType;
   publisher: Publisher;
   format: string;
+  // New pricing fields
+  pricePerUnit?: number;
+  cpt?: number;
+  minOrderValue?: number;
+  // Legacy field for backward compatibility
   priceFrom: number;
   discountPercent: number;
   validFrom: string;
   validTo: string;
   description: string;
   whatsIncluded: string[];
-  terms: string;
+  // Technical conditions
+  technicalConditionsText?: string;
+  technicalConditionsPdf?: string;
+  technicalConditionsUrl?: string;
   deadline: string;
+  lastOrderDate?: string;
   tags: OfferTag[];
+  requireFinalClient: boolean;
   status: 'draft' | 'published' | 'archived';
 }
 
@@ -62,15 +73,20 @@ export const mockOffers: Offer[] = [
     mediaType: 'online',
     publisher: 'Mafra',
     format: 'Leaderboard 970x250',
+    pricePerUnit: 45000,
+    cpt: 90,
+    minOrderValue: 20000,
     priceFrom: 45000,
     discountPercent: 35,
     validFrom: '2026-01-10',
     validTo: '2026-01-31',
     description: 'Exkluzivní pozice na titulní stránce s garantovaným zásahem 500k impresí.',
     whatsIncluded: ['500 000 impresí', 'Kreativní konzultace', 'Reporty v reálném čase'],
-    terms: 'Podklady ve formátu HTML5 nebo statický JPG/PNG.',
+    technicalConditionsText: 'Podklady ve formátu HTML5 nebo statický JPG/PNG.',
     deadline: '3 pracovní dny před spuštěním',
+    lastOrderDate: '2026-01-28',
     tags: ['last-minute'],
+    requireFinalClient: true,
     status: 'published'
   },
   {
@@ -81,15 +97,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'rádio',
     publisher: 'Radiohouse',
     format: '30s spot',
+    pricePerUnit: 12000,
     priceFrom: 12000,
     discountPercent: 20,
     validFrom: '2026-01-15',
     validTo: '2026-02-15',
     description: 'Vysílací čas 6:00-9:00 s nejvyšší poslechovostí dne.',
     whatsIncluded: ['10 spotů týdně', 'Produkce spotu zdarma', 'Targeting na region'],
-    terms: 'Schválení scenáře do 24h.',
+    technicalConditionsText: 'Schválení scenáře do 24h.',
     deadline: '5 pracovních dnů',
     tags: ['speciál'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -100,15 +118,19 @@ export const mockOffers: Offer[] = [
     mediaType: 'OOH',
     publisher: 'Areklama',
     format: 'Citylight 118x175cm',
+    pricePerUnit: 28000,
     priceFrom: 28000,
     discountPercent: 50,
     validFrom: '2026-02-01',
     validTo: '2026-02-28',
     description: '50 citylightů v nejvytíženějších stanicích metra A a B.',
     whatsIncluded: ['50 ploch na 4 týdny', 'Instalace a deinstalace', 'Fotografická dokumentace'],
-    terms: 'Tisk zajišťuje zadavatel nebo možnost doobjednat.',
+    technicalConditionsText: 'Tisk zajišťuje zadavatel nebo možnost doobjednat.',
+    technicalConditionsUrl: 'https://example.com/specs',
     deadline: '7 pracovních dnů',
+    lastOrderDate: '2026-01-25',
     tags: ['akce'],
+    requireFinalClient: true,
     status: 'published'
   },
   {
@@ -119,15 +141,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'print',
     publisher: 'Economia',
     format: 'Celá strana A3',
+    pricePerUnit: 185000,
     priceFrom: 185000,
     discountPercent: 15,
     validFrom: '2026-01-20',
     validTo: '2026-03-31',
     description: 'Prémiová pozice v Hospodářských novinách s dosahem na business decision makery.',
     whatsIncluded: ['1x celostránka', 'Premium pozice (pravá strana)', 'Online verze zdarma'],
-    terms: 'PDF v tiskovém rozlišení 300 DPI, CMYK.',
+    technicalConditionsText: 'PDF v tiskovém rozlišení 300 DPI, CMYK.',
     deadline: '10 pracovních dnů',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -138,15 +162,18 @@ export const mockOffers: Offer[] = [
     mediaType: 'video',
     publisher: 'Nova',
     format: 'Video 15s pre-roll',
+    cpt: 350,
+    minOrderValue: 15000,
     priceFrom: 35000,
     discountPercent: 60,
     validFrom: '2026-01-08',
     validTo: '2026-01-25',
     description: 'Cílená video kampaň s garantovaným zásahem a completion rate.',
     whatsIncluded: ['100 000 completed views', 'Cílení dle zájmů', 'Brand safety garantováno'],
-    terms: 'Video MP4, max 15s, do 2MB.',
+    technicalConditionsText: 'Video MP4, max 15s, do 2MB.',
     deadline: '2 pracovní dny',
     tags: ['last-minute', 'speciál'],
+    requireFinalClient: true,
     status: 'published'
   },
   {
@@ -157,15 +184,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'rádio',
     publisher: 'Radiohouse',
     format: '20s spot',
+    pricePerUnit: 8500,
     priceFrom: 8500,
     discountPercent: 25,
     validFrom: '2026-01-12',
     validTo: '2026-02-28',
     description: 'Mladá cílovka 18-35, vysílání 14:00-18:00.',
     whatsIncluded: ['8 spotů denně', 'Zmínka v soutěžích', 'Social media podpora'],
-    terms: 'Audio WAV nebo MP3 320kbps.',
+    technicalConditionsText: 'Audio WAV nebo MP3 320kbps.',
     deadline: '3 pracovní dny',
     tags: ['akce'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -176,15 +205,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'influenceři',
     publisher: 'MediaClub',
     format: 'Stories + Feed post',
+    pricePerUnit: 22000,
     priceFrom: 22000,
     discountPercent: 40,
     validFrom: '2026-01-15',
     validTo: '2026-02-15',
     description: 'Spolupráce s TOP influencerem s 150k+ followers.',
     whatsIncluded: ['3x Instagram stories', '1x Feed post', 'Měření engagement'],
-    terms: 'Brief a materiály od klienta.',
+    technicalConditionsText: 'Brief a materiály od klienta.',
     deadline: '4 pracovní dny',
     tags: ['speciál'],
+    requireFinalClient: true,
     status: 'published'
   },
   {
@@ -195,15 +226,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'OOH',
     publisher: 'Areklama',
     format: 'Megaboard 12x4m',
+    pricePerUnit: 95000,
     priceFrom: 95000,
     discountPercent: 10,
     validFrom: '2026-02-01',
     validTo: '2026-04-30',
     description: 'Nejfrekventovanější tah s denní návštěvností 85 000 vozidel.',
     whatsIncluded: ['3 měsíce', 'Noční osvětlení', 'Monitoring stavu'],
-    terms: 'Tisk v ceně, dodání grafiky v AI/PDF.',
+    technicalConditionsText: 'Tisk v ceně, dodání grafiky v AI/PDF.',
     deadline: '14 pracovních dnů',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -214,15 +247,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'online',
     publisher: 'Mafra',
     format: 'Nativní článek + FB/IG',
+    pricePerUnit: 55000,
     priceFrom: 55000,
     discountPercent: 30,
     validFrom: '2026-01-10',
     validTo: '2026-02-10',
     description: 'Komplexní content balíček s distribucí na sociálních sítích.',
     whatsIncluded: ['PR článek 3000 znaků', '2x Facebook post', '1x Instagram story'],
-    terms: 'Dodání briefu a podkladů.',
+    technicalConditionsText: 'Dodání briefu a podkladů.',
     deadline: '7 pracovních dnů',
     tags: ['akce', 'speciál'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -233,15 +268,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'rádio',
     publisher: 'Radiohouse',
     format: 'Sponzorský vzkaz 10s',
+    pricePerUnit: 18000,
     priceFrom: 18000,
     discountPercent: 15,
     validFrom: '2026-01-20',
     validTo: '2026-03-20',
     description: 'Sponzoring zpráv o počasí - 8x denně.',
     whatsIncluded: ['56 odvysílání týdně', 'Zmínka "počasí přináší"', 'Jingle produkce'],
-    terms: 'Schválení znění klientem.',
+    technicalConditionsText: 'Schválení znění klientem.',
     deadline: '5 pracovních dnů',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -252,15 +289,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'OOH',
     publisher: 'Areklama',
     format: 'CLV 118x175cm',
+    pricePerUnit: 15000,
     priceFrom: 15000,
     discountPercent: 80,
     validFrom: '2026-01-25',
     validTo: '2026-02-25',
     description: '30 zastávek v centru Brna.',
     whatsIncluded: ['30 ploch/měsíc', 'Instalace', 'GPS tracking'],
-    terms: 'Podklady dle technické specifikace.',
+    technicalConditionsText: 'Podklady dle technické specifikace.',
     deadline: '7 pracovních dnů',
     tags: ['last-minute'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -271,15 +310,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'print',
     publisher: 'Economia',
     format: '1/2 strany',
+    pricePerUnit: 65000,
     priceFrom: 65000,
     discountPercent: 25,
     validFrom: '2026-02-01',
     validTo: '2026-03-31',
     description: 'Páteční příloha s lifestyle obsahem.',
     whatsIncluded: ['1x 1/2 strany', 'Prémiový papír', 'Cílení na affluent'],
-    terms: 'PDF dle specifikace.',
+    technicalConditionsText: 'PDF dle specifikace.',
     deadline: '10 pracovních dnů',
     tags: ['akce'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -290,15 +331,18 @@ export const mockOffers: Offer[] = [
     mediaType: 'online',
     publisher: 'Nova',
     format: 'Multi-format display',
+    cpt: 80,
+    minOrderValue: 10000,
     priceFrom: 25000,
     discountPercent: 45,
     validFrom: '2026-01-08',
     validTo: '2026-02-08',
     description: 'Optimalizovaná display kampaň s real-time biddingem.',
     whatsIncluded: ['300 000 impresí', 'A/B testování', 'Retargeting'],
-    terms: 'Bannery dle IAB standardů.',
+    technicalConditionsText: 'Bannery dle IAB standardů.',
     deadline: '2 pracovní dny',
     tags: ['last-minute'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -309,15 +353,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'rádio',
     publisher: 'Radiohouse',
     format: '30s spot',
+    pricePerUnit: 9500,
     priceFrom: 9500,
     discountPercent: 10,
     validFrom: '2026-01-15',
     validTo: '2026-02-28',
     description: 'Prime time 18:00-22:00, nejvyšší poslechovost.',
     whatsIncluded: ['6 spotů denně', 'Rotace v TOP hodinách'],
-    terms: 'Audio připravené k vysílání.',
+    technicalConditionsText: 'Audio připravené k vysílání.',
     deadline: '3 pracovní dny',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -328,15 +374,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'sociální sítě',
     publisher: 'CNC',
     format: 'Social posts + boosting',
+    pricePerUnit: 45000,
     priceFrom: 45000,
     discountPercent: 35,
     validFrom: '2026-01-20',
     validTo: '2026-02-20',
     description: 'Kampaň na sociálních sítích s placenou propagací.',
     whatsIncluded: ['5 postů', 'Boosting 20k reach', 'Report'],
-    terms: 'Materiály od klienta.',
+    technicalConditionsText: 'Materiály od klienta.',
     deadline: '7 pracovních dnů',
     tags: ['speciál'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -347,15 +395,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'OOH',
     publisher: 'Areklama',
     format: 'Digital OOH',
+    pricePerUnit: 55000,
     priceFrom: 55000,
     discountPercent: 55,
     validFrom: '2026-01-15',
     validTo: '2026-02-15',
     description: '10 LED obrazovek na klíčových křižovatkách.',
     whatsIncluded: ['15s spot', '500 opakování denně', '10 lokací'],
-    terms: 'Video MP4 1920x1080.',
+    technicalConditionsText: 'Video MP4 1920x1080.',
     deadline: '5 pracovních dnů',
     tags: ['akce', 'last-minute'],
+    requireFinalClient: true,
     status: 'published'
   },
   {
@@ -366,15 +416,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'online',
     publisher: 'Mafra',
     format: 'Fullscreen interstitial',
+    cpt: 190,
     priceFrom: 38000,
     discountPercent: 20,
     validFrom: '2026-01-12',
     validTo: '2026-02-12',
     description: 'Vysoký engagement díky fullscreen formátu.',
     whatsIncluded: ['200 000 impresí', 'Frequency cap', 'Close button po 3s'],
-    terms: 'HTML5 nebo video.',
+    technicalConditionsText: 'HTML5 nebo video.',
     deadline: '3 pracovní dny',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -385,15 +437,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'rádio',
     publisher: 'Radiohouse',
     format: 'Sponzorský vzkaz',
+    pricePerUnit: 25000,
     priceFrom: 25000,
     discountPercent: 30,
     validFrom: '2026-02-01',
     validTo: '2026-03-31',
     description: 'Nejposlouchanější ranní show v ČR.',
     whatsIncluded: ['Denní zmínky', 'Logo na webu', 'Social podpora'],
-    terms: 'Schválení textu moderátorem.',
+    technicalConditionsText: 'Schválení textu moderátorem.',
     deadline: '7 pracovních dnů',
     tags: ['speciál'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -404,15 +458,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'OOH',
     publisher: 'Areklama',
     format: 'Velkoformát 5x3m',
+    pricePerUnit: 42000,
     priceFrom: 42000,
     discountPercent: 15,
     validFrom: '2026-02-01',
     validTo: '2026-02-28',
     description: '2 plochy v hale s denní frekvencí 100 000 osob.',
     whatsIncluded: ['2 plochy', 'Backlight', 'Premium pozice'],
-    terms: 'Tisk na náklady klienta.',
+    technicalConditionsText: 'Tisk na náklady klienta.',
     deadline: '10 pracovních dnů',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -423,15 +479,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'print',
     publisher: 'Economia',
     format: 'Advertorial 1 strana',
+    pricePerUnit: 120000,
     priceFrom: 120000,
     discountPercent: 40,
     validFrom: '2026-01-25',
     validTo: '2026-03-25',
     description: 'Redakční styl, vysoká důvěryhodnost.',
     whatsIncluded: ['Text + foto', 'Redakční zpracování', 'Online verze'],
-    terms: 'Briefing a materiály od klienta.',
+    technicalConditionsText: 'Briefing a materiály od klienta.',
     deadline: '14 pracovních dnů',
     tags: ['akce'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -442,15 +500,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'video',
     publisher: 'Nova',
     format: 'Video 6s bumper',
+    cpt: 120,
     priceFrom: 18000,
     discountPercent: 70,
     validFrom: '2026-01-10',
     validTo: '2026-02-10',
     description: 'Nepřeskočitelné 6s video s vysokým reach.',
     whatsIncluded: ['150 000 views', 'Brand awareness focus'],
-    terms: 'Video do 6s, MP4.',
+    technicalConditionsText: 'Video do 6s, MP4.',
     deadline: '2 pracovní dny',
     tags: ['last-minute'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -461,15 +521,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'rádio',
     publisher: 'Radiohouse',
     format: '30s spot sobota-neděle',
+    pricePerUnit: 6500,
     priceFrom: 6500,
     discountPercent: 20,
     validFrom: '2026-01-18',
     validTo: '2026-03-15',
     description: 'Relaxovaná víkendová poslechovost.',
     whatsIncluded: ['4 spoty denně', 'So+Ne'],
-    terms: 'Audio ready.',
+    technicalConditionsText: 'Audio ready.',
     deadline: '3 pracovní dny',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -480,15 +542,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'influenceři',
     publisher: 'MediaClub',
     format: 'TikTok video + duet',
+    pricePerUnit: 35000,
     priceFrom: 35000,
     discountPercent: 50,
     validFrom: '2026-01-15',
     validTo: '2026-02-28',
     description: 'Virální TikTok obsah s TOP českým influencerem.',
     whatsIncluded: ['2x TikTok video', '1x duet reakce', 'Měření views'],
-    terms: 'Kreativní brief.',
-    deadline: '5 pracovní dny',
+    technicalConditionsText: 'Kreativní brief.',
+    deadline: '5 pracovních dnů',
     tags: ['akce'],
+    requireFinalClient: true,
     status: 'published'
   },
   {
@@ -499,15 +563,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'OOH',
     publisher: 'Areklama',
     format: 'Billboard síť',
+    pricePerUnit: 125000,
     priceFrom: 125000,
     discountPercent: 25,
     validFrom: '2026-02-15',
     validTo: '2026-05-15',
     description: '15 billboardů na D1 a D5.',
     whatsIncluded: ['3 měsíce', '15 ploch', 'Monitoring'],
-    terms: 'Jednotná grafika pro všechny plochy.',
+    technicalConditionsText: 'Jednotná grafika pro všechny plochy.',
     deadline: '14 pracovních dnů',
     tags: ['speciál'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -518,15 +584,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'online',
     publisher: 'Mafra',
     format: 'Homepage skin',
+    pricePerUnit: 85000,
     priceFrom: 85000,
     discountPercent: 65,
     validFrom: '2026-01-20',
     validTo: '2026-01-27',
     description: 'Kompletní brandování homepage na týden.',
     whatsIncluded: ['7 dní exkluzivity', '2M impresí', 'Custom design'],
-    terms: 'Grafika dle template.',
+    technicalConditionsText: 'Grafika dle template.',
     deadline: '5 pracovních dnů',
     tags: ['speciál', 'last-minute'],
+    requireFinalClient: true,
     status: 'published'
   },
   {
@@ -537,15 +605,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'rádio',
     publisher: 'Radiohouse',
     format: '20s spot',
+    pricePerUnit: 15000,
     priceFrom: 15000,
     discountPercent: 15,
     validFrom: '2026-01-25',
     validTo: '2026-02-25',
     description: 'Ranní a odpolední špička 7-9 a 16-18.',
     whatsIncluded: ['12 spotů denně', '4 v ranní, 4 v odpolední špičce'],
-    terms: 'Audio formát WAV.',
+    technicalConditionsText: 'Audio formát WAV.',
     deadline: '4 pracovní dny',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -556,15 +626,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'OOH',
     publisher: 'Areklama',
     format: 'Indoor network',
+    pricePerUnit: 32000,
     priceFrom: 32000,
     discountPercent: 35,
     validFrom: '2026-02-01',
     validTo: '2026-02-28',
     description: '20 CLV ploch v Centru Chodov.',
     whatsIncluded: ['20 ploch', 'Měsíční kampaň', 'High dwell time'],
-    terms: 'Grafika 118x175cm.',
+    technicalConditionsText: 'Grafika 118x175cm.',
     deadline: '7 pracovních dnů',
     tags: ['akce'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -575,15 +647,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'print',
     publisher: 'Economia',
     format: 'Dvojstrana',
+    pricePerUnit: 220000,
     priceFrom: 220000,
     discountPercent: 10,
     validFrom: '2026-02-01',
     validTo: '2026-04-30',
     description: 'Prestižní pozice v týdeníku Respekt.',
     whatsIncluded: ['1x dvojstrana', 'Prémiové umístění', 'Online zmínka'],
-    terms: 'High-res PDF.',
+    technicalConditionsText: 'High-res PDF.',
     deadline: '14 pracovních dnů',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -594,15 +668,18 @@ export const mockOffers: Offer[] = [
     mediaType: 'video',
     publisher: 'Nova',
     format: 'CTV 30s',
+    cpt: 480,
+    minOrderValue: 25000,
     priceFrom: 48000,
     discountPercent: 45,
     validFrom: '2026-01-15',
     validTo: '2026-02-15',
     description: 'Reklama na chytrých TV.',
     whatsIncluded: ['50 000 completed views', 'Cílení na domácnosti'],
-    terms: 'Video 1920x1080, 30s.',
+    technicalConditionsText: 'Video 1920x1080, 30s.',
     deadline: '3 pracovní dny',
     tags: ['speciál'],
+    requireFinalClient: true,
     status: 'published'
   },
   {
@@ -613,15 +690,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'rádio',
     publisher: 'Radiohouse',
     format: 'Event partnership',
+    pricePerUnit: 75000,
     priceFrom: 75000,
     discountPercent: 20,
     validFrom: '2026-06-01',
     validTo: '2026-08-31',
     description: 'Sponzoring letních festivalových přenosů.',
     whatsIncluded: ['Logo', 'Spoty', 'Zmínky moderátorů', 'Soutěže'],
-    terms: 'Partnerská smlouva.',
+    technicalConditionsText: 'Partnerská smlouva.',
     deadline: '30 pracovních dnů',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -632,15 +711,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'sociální sítě',
     publisher: 'CNC',
     format: 'LinkedIn Sponsored Content',
+    pricePerUnit: 55000,
     priceFrom: 55000,
     discountPercent: 30,
     validFrom: '2026-02-01',
     validTo: '2026-03-01',
     description: 'B2B targeting na decision makery.',
     whatsIncluded: ['5 postů', 'Lead gen form', 'Report'],
-    terms: 'B2B relevantní content.',
+    technicalConditionsText: 'B2B relevantní content.',
     deadline: '5 pracovních dnů',
     tags: ['akce', 'speciál'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -651,15 +732,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'OOH',
     publisher: 'Areklama',
     format: 'Digital totems',
+    pricePerUnit: 68000,
     priceFrom: 68000,
     discountPercent: 15,
     validFrom: '2026-02-01',
     validTo: '2026-03-31',
     description: 'Digital totemy v příletové hale.',
     whatsIncluded: ['4 totemy', '2 měsíce', 'High-end publikum'],
-    terms: 'Video loop 15s.',
+    technicalConditionsText: 'Video loop 15s.',
     deadline: '10 pracovních dnů',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -670,15 +753,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'online',
     publisher: 'Mafra',
     format: 'Expandable banner',
+    cpt: 210,
     priceFrom: 52000,
     discountPercent: 55,
     validFrom: '2026-01-18',
     validTo: '2026-02-18',
     description: 'Interaktivní formát s vysokým engagement.',
     whatsIncluded: ['250 000 impresí', 'Custom kreativa', 'Video možnost'],
-    terms: 'HTML5 dle specifikace.',
+    technicalConditionsText: 'HTML5 dle specifikace.',
     deadline: '5 pracovních dnů',
     tags: ['last-minute'],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -689,15 +774,17 @@ export const mockOffers: Offer[] = [
     mediaType: 'rádio',
     publisher: 'Radiohouse',
     format: 'Podcast mention',
+    pricePerUnit: 8000,
     priceFrom: 8000,
     discountPercent: 25,
     validFrom: '2026-01-20',
     validTo: '2026-03-20',
     description: 'Zmínky v TOP podcastech rádia.',
     whatsIncluded: ['4 epizody', 'Host read', 'Link v popisu'],
-    terms: 'Brief pro moderátora.',
+    technicalConditionsText: 'Brief pro moderátora.',
     deadline: '7 pracovních dnů',
     tags: [],
+    requireFinalClient: false,
     status: 'published'
   },
   {
@@ -708,19 +795,48 @@ export const mockOffers: Offer[] = [
     mediaType: 'OOH',
     publisher: 'Areklama',
     format: 'Full wrap tramvaj',
+    pricePerUnit: 145000,
     priceFrom: 145000,
     discountPercent: 40,
     validFrom: '2026-03-01',
     validTo: '2026-05-31',
     description: 'Celopolep tramvaje na lince 22.',
     whatsIncluded: ['3 měsíce', 'Design', 'Instalace', 'Tracking'],
-    terms: 'Grafika na celý vůz.',
+    technicalConditionsText: 'Grafika na celý vůz.',
     deadline: '21 pracovních dnů',
     tags: ['speciál'],
+    requireFinalClient: true,
     status: 'published'
   },
 ];
 
+// Order interface (renamed from Inquiry)
+export interface Order {
+  id: string;
+  orderId: string;
+  offerId: string;
+  offerTitle: string;
+  mediaId: string;
+  mediaName: string;
+  agencyId: string;
+  status: OrderStatus;
+  createdAt: string;
+  preferredFrom: string;
+  preferredTo: string;
+  pricingType: 'unit' | 'cpt';
+  unitPrice?: number;
+  cptValue?: number;
+  quantity?: number;
+  impressions?: number;
+  totalPrice: number;
+  finalClient?: string;
+  note: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+}
+
+// Legacy Inquiry interface for backward compatibility
 export interface Inquiry {
   id: string;
   offerId: string;
@@ -736,6 +852,84 @@ export interface Inquiry {
   phone: string;
 }
 
+// Generate unique order ID
+export const generateOrderId = () => {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `OBJ-${year}${month}-${random}`;
+};
+
+export const mockOrders: Order[] = [
+  {
+    id: 'ord1',
+    orderId: 'OBJ-2601-A1B2',
+    offerId: '1',
+    offerTitle: 'Prémiový banner na homepage',
+    mediaId: 'm1',
+    mediaName: 'iDNES.cz',
+    agencyId: 'ag1',
+    status: 'nová',
+    createdAt: '2026-01-05',
+    preferredFrom: '2026-01-15',
+    preferredTo: '2026-01-31',
+    pricingType: 'unit',
+    unitPrice: 45000,
+    quantity: 1,
+    totalPrice: 45000,
+    finalClient: 'Škoda Auto',
+    note: 'Máme zájem o kampaň k uvedení nového produktu.',
+    contactName: 'Jan Novák',
+    contactEmail: 'jan.novak@agentura.cz',
+    contactPhone: '+420 777 123 456'
+  },
+  {
+    id: 'ord2',
+    orderId: 'OBJ-2601-C3D4',
+    offerId: '3',
+    offerTitle: 'Citylight metro Praha',
+    mediaId: 'm3',
+    mediaName: 'JCDecaux',
+    agencyId: 'ag1',
+    status: 'v řešení',
+    createdAt: '2026-01-03',
+    preferredFrom: '2026-02-01',
+    preferredTo: '2026-02-28',
+    pricingType: 'unit',
+    unitPrice: 28000,
+    quantity: 2,
+    totalPrice: 56000,
+    finalClient: 'T-Mobile',
+    note: 'Potřebujeme coverage v centru, ideálně stanice Můstek a Muzeum.',
+    contactName: 'Petra Svobodová',
+    contactEmail: 'petra@marketing.cz',
+    contactPhone: '+420 602 456 789'
+  },
+  {
+    id: 'ord3',
+    orderId: 'OBJ-2512-E5F6',
+    offerId: '5',
+    offerTitle: 'Pre-roll kampaň',
+    mediaId: 'm5',
+    mediaName: 'Stream.cz',
+    agencyId: 'ag1',
+    status: 'objednávka uzavřena',
+    createdAt: '2025-12-20',
+    preferredFrom: '2026-01-01',
+    preferredTo: '2026-01-25',
+    pricingType: 'cpt',
+    cptValue: 350,
+    impressions: 100000,
+    totalPrice: 35000,
+    note: 'Video kampaň pro automotive klienta.',
+    contactName: 'Martin Dvořák',
+    contactEmail: 'm.dvorak@agency.com',
+    contactPhone: '+420 608 111 222'
+  }
+];
+
+// Keep legacy mockInquiries for backward compatibility
 export const mockInquiries: Inquiry[] = [
   {
     id: 'inq1',

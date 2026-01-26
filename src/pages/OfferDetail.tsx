@@ -3,17 +3,17 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { mockOffers, OfferTag } from '@/data/mockData';
-import InquiryModal from '@/components/InquiryModal';
+import OrderModal from '@/components/OrderModal';
 import { useApp } from '@/contexts/AppContext';
 import {
   ArrowLeft,
   Calendar,
-  Tag,
   FileText,
   Check,
   Clock,
   AlertCircle,
   Download,
+  ExternalLink,
 } from 'lucide-react';
 
 const tagLabels: Record<OfferTag, string> = {
@@ -41,7 +41,7 @@ const mediaTypeLabels: Record<string, string> = {
 const OfferDetail = () => {
   const { id } = useParams();
   const { role } = useApp();
-  const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [orderOpen, setOrderOpen] = useState(false);
 
   const offer = mockOffers.find((o) => o.id === id);
 
@@ -162,21 +162,59 @@ const OfferDetail = () => {
                     <dd className="font-medium text-destructive">{offer.discountPercent} %</dd>
                   </div>
                 )}
+                {offer.lastOrderDate && (
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Poslední možný den objednání</dt>
+                    <dd className="font-medium">{formatDate(offer.lastOrderDate)}</dd>
+                  </div>
+                )}
               </dl>
             </div>
 
-            {/* Terms */}
+            {/* Technical conditions */}
             <div className="bg-card rounded-xl border p-6">
               <h2 className="font-display font-semibold text-lg mb-4 flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-primary" />
-                Podmínky
+                Technické podmínky
               </h2>
-              <p className="text-muted-foreground mb-4">{offer.terms}</p>
-              <div className="flex items-center gap-2 text-sm">
+              
+              {offer.technicalConditionsText && (
+                <p className="text-muted-foreground mb-4">{offer.technicalConditionsText}</p>
+              )}
+              
+              {offer.technicalConditionsUrl && (
+                <a 
+                  href={offer.technicalConditionsUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-primary hover:underline mb-4"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Odkaz na technické podmínky
+                </a>
+              )}
+              
+              {offer.technicalConditionsPdf && (
+                <Button variant="outline" className="gap-2 mb-4">
+                  <FileText className="h-4 w-4" />
+                  Stáhnout PDF s technickými podmínkami
+                </Button>
+              )}
+              
+              <div className="flex items-center gap-2 text-sm pt-4 border-t">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Deadline na dodání podkladů:</span>
                 <span className="font-medium">{offer.deadline}</span>
               </div>
+              
+              {offer.requireFinalClient && (
+                <div className="flex items-start gap-2 mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg text-sm">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span className="text-amber-800 dark:text-amber-200">
+                    Tato nabídka vyžaduje uvedení finálního klienta při objednávce.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Attachments */}
@@ -200,10 +238,27 @@ const OfferDetail = () => {
             <div className="sticky top-24 bg-card rounded-xl border p-6 space-y-6">
               {/* Price */}
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Cena od (bez DPH)</p>
-                <p className="font-display text-3xl font-bold text-primary">
-                  {formatPrice(offer.priceFrom)}
-                </p>
+                {offer.pricePerUnit && (
+                  <div className="mb-2">
+                    <p className="text-sm text-muted-foreground mb-1">Cena za ks (bez DPH)</p>
+                    <p className="font-display text-2xl font-bold text-primary">
+                      {formatPrice(offer.pricePerUnit)}
+                    </p>
+                  </div>
+                )}
+                {offer.cpt && (
+                  <div className="mb-2">
+                    <p className="text-sm text-muted-foreground mb-1">CPT (bez DPH)</p>
+                    <p className="font-display text-2xl font-bold text-primary">
+                      {formatPrice(offer.cpt)}
+                    </p>
+                  </div>
+                )}
+                {offer.minOrderValue && (
+                  <p className="text-sm text-muted-foreground">
+                    Min. hodnota objednávky: {formatPrice(offer.minOrderValue)}
+                  </p>
+                )}
               </div>
 
               {/* Validity */}
@@ -221,13 +276,17 @@ const OfferDetail = () => {
               <Button
                 size="lg"
                 className="w-full"
-                onClick={() => setInquiryOpen(true)}
+                onClick={() => setOrderOpen(true)}
               >
                 Objednat
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
-                Odesláním souhlasíte se zpracováním osobních údajů za účelem vyřízení poptávky.
+                Odesláním souhlasíte s{' '}
+                <Link to="/terms" className="underline hover:text-primary">
+                  obchodními podmínkami
+                </Link>
+                .
               </p>
 
               {/* Media info */}
@@ -250,7 +309,7 @@ const OfferDetail = () => {
         </div>
       </div>
 
-      <InquiryModal offer={offer} open={inquiryOpen} onOpenChange={setInquiryOpen} />
+      <OrderModal offer={offer} open={orderOpen} onOpenChange={setOrderOpen} />
     </div>
   );
 };

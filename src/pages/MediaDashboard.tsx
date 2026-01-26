@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -9,17 +10,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockOffers, mockInquiries } from '@/data/mockData';
+import { mockOffers, OrderStatus } from '@/data/mockData';
+import { useApp } from '@/contexts/AppContext';
 import EmptyState from '@/components/EmptyState';
 import { Plus, Edit, Archive, FileText, Inbox, ExternalLink } from 'lucide-react';
 
 const MediaDashboard = () => {
   const navigate = useNavigate();
+  const { orders, updateOrderStatus, role } = useApp();
 
   // Simulate media's own offers (using first 8 offers as "mine")
   const myOffers = mockOffers.slice(0, 8);
-  // Simulate inquiries on my offers
-  const myInquiries = mockInquiries.slice(0, 2);
+  // Filter orders for my offers
+  const myOrders = orders.filter(order => 
+    myOffers.some(offer => offer.id === order.offerId)
+  );
 
   const statusStyles: Record<string, string> = {
     draft: 'bg-secondary text-secondary-foreground',
@@ -33,10 +38,10 @@ const MediaDashboard = () => {
     archived: 'Archivováno',
   };
 
-  const inquiryStatusStyles: Record<string, string> = {
-    nová: 'status-nova',
+  const orderStatusStyles: Record<OrderStatus, string> = {
+    'nová': 'status-nova',
     'v řešení': 'status-reseni',
-    uzavřená: 'status-uzavrena',
+    'objednávka uzavřena': 'status-uzavrena',
   };
 
   const formatPrice = (price: number) => {
@@ -55,6 +60,12 @@ const MediaDashboard = () => {
     });
   };
 
+  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
+    updateOrderStatus(orderId, newStatus);
+  };
+
+  const canChangeStatus = role === 'media' || role === 'admin';
+
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4">
@@ -63,7 +74,7 @@ const MediaDashboard = () => {
           <div>
             <h1 className="font-display text-3xl font-bold mb-1">Dashboard média</h1>
             <p className="text-muted-foreground">
-              Spravujte své nabídky a sledujte poptávky
+              Spravujte své nabídky a sledujte objednávky
             </p>
           </div>
           <Link to="/media/offers/new">
@@ -141,51 +152,81 @@ const MediaDashboard = () => {
           )}
         </section>
 
-        {/* Inquiries on my offers */}
+        {/* Orders on my offers */}
         <section>
-          <h2 className="font-display text-xl font-semibold mb-4">Poptávky na moje nabídky</h2>
+          <h2 className="font-display text-xl font-semibold mb-4">Objednávky na moje nabídky</h2>
 
-          {myInquiries.length > 0 ? (
+          {myOrders.length > 0 ? (
             <div className="space-y-4">
-              {myInquiries.map((inquiry) => (
+              {myOrders.map((order) => (
                 <div
-                  key={inquiry.id}
+                  key={order.id}
                   className="bg-card rounded-xl border p-5"
                 >
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge className={inquiryStatusStyles[inquiry.status]}>
-                          {inquiry.status}
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="font-mono text-sm font-medium text-primary">
+                          {order.orderId}
+                        </span>
+                        <Badge className={orderStatusStyles[order.status]}>
+                          {order.status}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {formatDate(inquiry.createdAt)}
+                          {formatDate(order.createdAt)}
                         </span>
                       </div>
-                      <h3 className="font-semibold mb-1">{inquiry.offerTitle}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {inquiry.note}
-                      </p>
-                      <div className="grid sm:grid-cols-3 gap-4 text-sm">
+                      <h3 className="font-semibold mb-1">{order.offerTitle}</h3>
+                      {order.note && (
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {order.note}
+                        </p>
+                      )}
+                      <div className="grid sm:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Kontakt</p>
-                          <p className="font-medium">{inquiry.contactPerson}</p>
+                          <p className="font-medium">{order.contactName}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">E-mail</p>
-                          <p className="font-medium">{inquiry.email}</p>
+                          <p className="font-medium">{order.contactEmail}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Telefon</p>
-                          <p className="font-medium">{inquiry.phone}</p>
+                          <p className="font-medium">{order.contactPhone || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Celková cena</p>
+                          <p className="font-medium">{formatPrice(order.totalPrice)}</p>
                         </div>
                       </div>
+                      {order.finalClient && (
+                        <div className="mt-3 text-sm">
+                          <span className="text-muted-foreground">Finální klient: </span>
+                          <span className="font-medium">{order.finalClient}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Odpovědět
-                      </Button>
-                    </div>
+                    
+                    {/* Status change dropdown */}
+                    {canChangeStatus && (
+                      <div className="flex flex-col gap-2 min-w-[200px]">
+                        <p className="text-sm text-muted-foreground">Zadejte stav objednávky</p>
+                        <Select
+                          value={order.status}
+                          onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nová">nová</SelectItem>
+                            <SelectItem value="v řešení">v řešení</SelectItem>
+                            <SelectItem value="objednávka uzavřena">objednávka uzavřena</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -193,8 +234,8 @@ const MediaDashboard = () => {
           ) : (
             <EmptyState
               icon={Inbox}
-              title="Zatím nemáte žádné poptávky"
-              description="Jakmile někdo poptá vaši nabídku, uvidíte to zde."
+              title="Zatím nemáte žádné objednávky"
+              description="Jakmile někdo objedná vaši nabídku, uvidíte to zde."
             />
           )}
         </section>
