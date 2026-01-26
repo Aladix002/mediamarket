@@ -796,6 +796,8 @@ export const mockOffers: Offer[] = [
     publisher: 'Areklama',
     format: 'Full wrap tramvaj',
     pricePerUnit: 145000,
+    cpt: 120,
+    minOrderValue: 50000,
     priceFrom: 145000,
     discountPercent: 40,
     validFrom: '2026-03-01',
