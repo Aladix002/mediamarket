@@ -3,16 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/contexts/AppContext';
 import EmptyState from '@/components/EmptyState';
-import { FileText, ExternalLink, Inbox } from 'lucide-react';
+import { ExternalLink, Inbox } from 'lucide-react';
+import { OrderStatus } from '@/data/mockData';
 
 const AgencyDashboard = () => {
-  const { inquiries } = useApp();
+  const { orders } = useApp();
   const navigate = useNavigate();
 
-  const statusStyles: Record<string, string> = {
-    nová: 'status-nova',
+  const orderStatusStyles: Record<OrderStatus, string> = {
+    'nová': 'status-nova',
     'v řešení': 'status-reseni',
-    uzavřená: 'status-uzavrena',
+    'objednávka uzavřena': 'status-uzavrena',
   };
 
   const formatDate = (dateStr: string) => {
@@ -23,15 +24,24 @@ const AgencyDashboard = () => {
     });
   };
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('cs-CZ', {
+      style: 'currency',
+      currency: 'CZK',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="font-display text-3xl font-bold mb-1">Moje poptávky</h1>
+            <h1 className="font-display text-3xl font-bold mb-1">Moje objednávky</h1>
             <p className="text-muted-foreground">
-              Přehled vašich odeslaných poptávek a jejich stav
+              Přehled vašich odeslaných objednávek a jejich stav
             </p>
           </div>
           <Link to="/offers">
@@ -42,46 +52,51 @@ const AgencyDashboard = () => {
           </Link>
         </div>
 
-        {/* Inquiries list */}
-        {inquiries.length > 0 ? (
+        {/* Orders list */}
+        {orders.length > 0 ? (
           <div className="space-y-4">
-            {inquiries.map((inquiry) => (
+            {orders.map((order) => (
               <div
-                key={inquiry.id}
+                key={order.id}
                 className="bg-card rounded-xl border p-5 hover:shadow-md transition-shadow"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge className={statusStyles[inquiry.status]}>
-                        {inquiry.status}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className="font-mono text-sm font-medium text-primary">
+                        {order.orderId}
+                      </span>
+                      <Badge className={orderStatusStyles[order.status]}>
+                        {order.status}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        {formatDate(inquiry.createdAt)}
+                        {formatDate(order.createdAt)}
                       </span>
                     </div>
                     <h3 className="font-display font-semibold text-lg mb-1">
-                      {inquiry.offerTitle}
+                      {order.offerTitle}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-2">
-                      {inquiry.mediaName}
+                      {order.mediaName}
                     </p>
-                    {inquiry.note && (
+                    {order.note && (
                       <p className="text-sm text-muted-foreground line-clamp-2">
-                        {inquiry.note}
+                        {order.note}
                       </p>
                     )}
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 md:gap-4 md:items-center">
                     <div className="text-sm">
                       <p className="text-muted-foreground">Termín</p>
-                      <p className="font-medium">{inquiry.term}</p>
+                      <p className="font-medium">
+                        {formatDate(order.preferredFrom)} – {formatDate(order.preferredTo)}
+                      </p>
                     </div>
                     <div className="text-sm">
-                      <p className="text-muted-foreground">Rozpočet</p>
-                      <p className="font-medium">{inquiry.budget}</p>
+                      <p className="text-muted-foreground">Celková cena</p>
+                      <p className="font-medium">{formatPrice(order.totalPrice)}</p>
                     </div>
-                    <Link to={`/offers/${inquiry.offerId}`}>
+                    <Link to={`/offers/${order.offerId}`}>
                       <Button variant="outline" size="sm">
                         Detail nabídky
                       </Button>
@@ -94,8 +109,8 @@ const AgencyDashboard = () => {
         ) : (
           <EmptyState
             icon={Inbox}
-            title="Zatím nemáte žádné poptávky"
-            description="Procházejte nabídky a odesílejte poptávky na zajímavé mediální prostory."
+            title="Zatím nemáte žádné objednávky"
+            description="Procházejte nabídky a odesílejte objednávky na zajímavé mediální prostory."
             actionLabel="Procházet nabídky"
             onAction={() => navigate('/offers')}
           />
