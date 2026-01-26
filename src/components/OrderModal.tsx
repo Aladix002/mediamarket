@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { Offer, Order, generateOrderId } from '@/data/mockData';
@@ -21,8 +22,17 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [newOrderId, setNewOrderId] = useState('');
 
-  // Determine pricing type based on offer
-  const pricingType: 'unit' | 'cpt' = offer.pricePerUnit ? 'unit' : 'cpt';
+  // Check what pricing options are available
+  const hasUnitPrice = !!offer.pricePerUnit;
+  const hasCpt = !!offer.cpt;
+  const hasBothPricing = hasUnitPrice && hasCpt;
+
+  // Default pricing type: unit if available, otherwise cpt
+  const defaultPricingType: 'unit' | 'cpt' = hasUnitPrice ? 'unit' : 'cpt';
+  const [selectedPricingType, setSelectedPricingType] = useState<'unit' | 'cpt'>(defaultPricingType);
+
+  // Active pricing type (user-selected if both available, otherwise determined by offer)
+  const pricingType = hasBothPricing ? selectedPricingType : defaultPricingType;
 
   const [formData, setFormData] = useState({
     preferredFrom: '',
@@ -36,17 +46,23 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     contactPhone: '',
   });
 
+  // Normalize impressions input (remove spaces, convert to number)
+  const normalizedImpressions = useMemo(() => {
+    const cleaned = formData.impressions.replace(/\s/g, '');
+    const num = parseInt(cleaned);
+    return isNaN(num) || num <= 0 ? 0 : num;
+  }, [formData.impressions]);
+
   // Calculate total price
   const totalPrice = useMemo(() => {
     if (pricingType === 'unit' && offer.pricePerUnit) {
       const qty = parseInt(formData.quantity) || 0;
       return offer.pricePerUnit * qty;
     } else if (pricingType === 'cpt' && offer.cpt) {
-      const imp = parseInt(formData.impressions) || 0;
-      return (imp / 1000) * offer.cpt;
+      return (normalizedImpressions / 1000) * offer.cpt;
     }
     return 0;
-  }, [pricingType, offer, formData.quantity, formData.impressions]);
+  }, [pricingType, offer, formData.quantity, normalizedImpressions]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -78,7 +94,7 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
       unitPrice: pricingType === 'unit' ? offer.pricePerUnit : undefined,
       cptValue: pricingType === 'cpt' ? offer.cpt : undefined,
       quantity: pricingType === 'unit' ? parseInt(formData.quantity) : undefined,
-      impressions: pricingType === 'cpt' ? parseInt(formData.impressions) : undefined,
+      impressions: pricingType === 'cpt' ? normalizedImpressions : undefined,
       totalPrice,
       finalClient: formData.finalClient || undefined,
       note: formData.note,
@@ -98,6 +114,7 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     setTimeout(() => {
       setSubmitted(false);
       setNewOrderId('');
+      setSelectedPricingType(defaultPricingType);
       setFormData({
         preferredFrom: '',
         preferredTo: '',
@@ -186,6 +203,27 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
           <div className="border rounded-lg p-4 space-y-4">
             <h3 className="font-medium">Výpočet ceny</h3>
             
+            {/* Pricing type selector - only show if both options available */}
+            {hasBothPricing && (
+              <div className="space-y-2">
+                <Label>Způsob nacenění</Label>
+                <RadioGroup
+                  value={selectedPricingType}
+                  onValueChange={(value) => setSelectedPricingType(value as 'unit' | 'cpt')}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="unit" id="pricing-unit" />
+                    <Label htmlFor="pricing-unit" className="cursor-pointer">Cena za ks</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="cpt" id="pricing-cpt" />
+                    <Label htmlFor="pricing-cpt" className="cursor-pointer">CPT</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            
             {pricingType === 'unit' && offer.pricePerUnit && (
               <>
                 <div className="flex justify-between items-center">
@@ -223,12 +261,15 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
                   <Label htmlFor="impressions">Počet zobrazení *</Label>
                   <Input
                     id="impressions"
-                    type="number"
+                    type="text"
                     placeholder="např. 100000"
                     value={formData.impressions}
                     onChange={(e) => setFormData({ ...formData, impressions: e.target.value })}
-                    required
+                    required={pricingType === 'cpt'}
                   />
+                  {formData.impressions && normalizedImpressions === 0 && (
+                    <p className="text-xs text-destructive">Zadejte platné kladné číslo</p>
+                  )}
                 </div>
               </>
             )}
@@ -326,7 +367,10 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
             <Button 
               type="submit" 
               className="flex-1"
-              disabled={offer.minOrderValue ? totalPrice < offer.minOrderValue : false}
+              disabled={
+                (offer.minOrderValue && totalPrice < offer.minOrderValue) ||
+                (pricingType === 'cpt' && normalizedImpressions === 0)
+              }
             >
               Odeslat objednávku
             </Button>
