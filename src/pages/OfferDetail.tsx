@@ -44,6 +44,10 @@ const OfferDetail = () => {
   const [orderOpen, setOrderOpen] = useState(false);
 
   const offer = mockOffers.find((o) => o.id === id);
+  
+  // Check if offer is "Online" type - always use CPT
+  const isOnline = offer?.mediaType.toLowerCase() === 'online';
+  const canOrder = !isOnline || (isOnline && offer?.cpt);
 
   if (!offer) {
     return (
@@ -238,21 +242,43 @@ const OfferDetail = () => {
             <div className="sticky top-24 bg-card rounded-xl border p-6 space-y-6">
               {/* Price */}
               <div>
-                {offer.pricePerUnit && (
-                  <div className="mb-2">
-                    <p className="text-sm text-muted-foreground mb-1">Cena za ks (bez DPH)</p>
-                    <p className="font-display text-2xl font-bold text-primary">
-                      {formatPrice(offer.pricePerUnit)}
-                    </p>
-                  </div>
-                )}
-                {offer.cpt && (
-                  <div className="mb-2">
-                    <p className="text-sm text-muted-foreground mb-1">CPT (bez DPH)</p>
-                    <p className="font-display text-2xl font-bold text-primary">
-                      {formatPrice(offer.cpt)}
-                    </p>
-                  </div>
+                {isOnline ? (
+                  // Online offers - only show CPT
+                  <>
+                    {offer.cpt ? (
+                      <div className="mb-2">
+                        <p className="text-sm text-muted-foreground mb-1">CPT (cena za tisíc zobrazení)</p>
+                        <p className="font-display text-2xl font-bold text-primary">
+                          {formatPrice(offer.cpt)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mb-2 p-3 bg-destructive/10 rounded-lg">
+                        <p className="text-sm text-destructive font-medium">CPT není uvedeno</p>
+                        <p className="text-xs text-destructive/80">Tuto nabídku nelze objednat.</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // Non-online offers - show available pricing
+                  <>
+                    {offer.pricePerUnit && (
+                      <div className="mb-2">
+                        <p className="text-sm text-muted-foreground mb-1">Cena za ks (bez DPH)</p>
+                        <p className="font-display text-2xl font-bold text-primary">
+                          {formatPrice(offer.pricePerUnit)}
+                        </p>
+                      </div>
+                    )}
+                    {offer.cpt && (
+                      <div className="mb-2">
+                        <p className="text-sm text-muted-foreground mb-1">CPT (bez DPH)</p>
+                        <p className="font-display text-2xl font-bold text-primary">
+                          {formatPrice(offer.cpt)}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
                 {offer.minOrderValue && (
                   <p className="text-sm text-muted-foreground">
@@ -277,6 +303,8 @@ const OfferDetail = () => {
                 size="lg"
                 className="w-full"
                 onClick={() => setOrderOpen(true)}
+                disabled={!canOrder}
+                title={!canOrder ? 'Tuto nabídku nelze objednat - chybí CPT' : undefined}
               >
                 Objednat
               </Button>

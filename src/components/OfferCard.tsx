@@ -32,6 +32,9 @@ const mediaTypeLabels: Record<string, string> = {
 };
 
 const OfferCard = ({ offer, blurPrice = false }: OfferCardProps) => {
+  // Check if offer is "Online" type - always use CPT
+  const isOnline = offer.mediaType.toLowerCase() === 'online';
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
@@ -94,10 +97,25 @@ const OfferCard = ({ offer, blurPrice = false }: OfferCardProps) => {
         {/* Footer */}
         <div className="flex items-end justify-between pt-3 border-t mt-auto">
           <div>
-            <p className="text-xs text-muted-foreground">Cena od</p>
-            <p className={`font-display font-bold text-lg text-primary ${blurPrice ? 'blur-sm select-none' : ''}`}>
-              {formatPrice(offer.priceFrom)}
-            </p>
+            {isOnline ? (
+              <>
+                <p className="text-xs text-muted-foreground">CPT</p>
+                {offer.cpt ? (
+                  <p className={`font-display font-bold text-lg text-primary ${blurPrice ? 'blur-sm select-none' : ''}`}>
+                    {formatPrice(offer.cpt)}
+                  </p>
+                ) : (
+                  <p className="text-sm text-destructive">CPT není uvedeno</p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground">Cena od</p>
+                <p className={`font-display font-bold text-lg text-primary ${blurPrice ? 'blur-sm select-none' : ''}`}>
+                  {formatPrice(offer.priceFrom)}
+                </p>
+              </>
+            )}
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">

@@ -22,17 +22,22 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [newOrderId, setNewOrderId] = useState('');
 
+  // Check if offer is "Online" type - always use CPT
+  const isOnline = offer.mediaType.toLowerCase() === 'online';
+
   // Check what pricing options are available
   const hasUnitPrice = !!offer.pricePerUnit;
   const hasCpt = !!offer.cpt;
-  const hasBothPricing = hasUnitPrice && hasCpt;
+  
+  // For Online offers, force CPT; otherwise allow selection if both available
+  const hasBothPricing = !isOnline && hasUnitPrice && hasCpt;
 
-  // Default pricing type: unit if available, otherwise cpt
-  const defaultPricingType: 'unit' | 'cpt' = hasUnitPrice ? 'unit' : 'cpt';
+  // Default pricing type: Online = always CPT, otherwise unit if available
+  const defaultPricingType: 'unit' | 'cpt' = isOnline ? 'cpt' : (hasUnitPrice ? 'unit' : 'cpt');
   const [selectedPricingType, setSelectedPricingType] = useState<'unit' | 'cpt'>(defaultPricingType);
 
-  // Active pricing type (user-selected if both available, otherwise determined by offer)
-  const pricingType = hasBothPricing ? selectedPricingType : defaultPricingType;
+  // Active pricing type (Online = always CPT, otherwise user-selected if both available)
+  const pricingType = isOnline ? 'cpt' : (hasBothPricing ? selectedPricingType : defaultPricingType);
 
   const [formData, setFormData] = useState({
     preferredFrom: '',
