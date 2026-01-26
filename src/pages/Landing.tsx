@@ -51,7 +51,7 @@ const Landing = () => {
               </div>
               <h3 className="font-display font-semibold text-lg mb-2">Médium vloží nabídku</h3>
               <p className="text-muted-foreground text-sm">
-                Akční plochy, last minute termíny, speciální balíčky – vše přehledně a rychle
+                Přidejte své nabídky, akce, last minute či speciální balíčky. Jednoduše uvidíte objednávky.
               </p>
             </div>
             <div className="text-center">
@@ -60,7 +60,7 @@ const Landing = () => {
               </div>
               <h3 className="font-display font-semibold text-lg mb-2">Agentura vybírá a poptává</h3>
               <p className="text-muted-foreground text-sm">
-                Procházíte nabídky, filtrujete podle typu, termínu i ceny, poptáte jedním klikem
+                Procházíte nabídky, filtrujete podle typu, termínu i ceny, objednáte jedním klikem
               </p>
             </div>
             <div className="text-center">
