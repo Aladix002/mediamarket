@@ -69,7 +69,7 @@ const Landing = () => {
               </div>
               <h3 className="font-display font-semibold text-lg mb-2">Dohoda přímo mezi vámi</h3>
               <p className="text-muted-foreground text-sm">
-                Žádný prostředník, žádné provize – vy si domluvíte finální podmínky
+                Jasné podmínky, předem daná provize pouze při uzavření objednávky
               </p>
             </div>
           </div>
