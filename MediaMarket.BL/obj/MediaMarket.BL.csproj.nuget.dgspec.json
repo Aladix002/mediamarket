@@ -1,0 +1,146 @@
+{
+  "format": 1,
+  "restore": {
+    "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/MediaMarket.BL.csproj": {}
+  },
+  "projects": {
+    "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/MediaMarket.BL.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/MediaMarket.BL.csproj",
+        "projectName": "MediaMarket.BL",
+        "projectPath": "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/MediaMarket.BL.csproj",
+        "packagesPath": "/home/aladix/.nuget/packages/",
+        "outputPath": "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/aladix/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/MediaMarket.DAL.csproj": {
+                "projectPath": "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/MediaMarket.DAL.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "FluentValidation": {
+              "target": "Package",
+              "version": "[12.1.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/home/aladix/.dotnet/sdk/9.0.308/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/MediaMarket.DAL.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/MediaMarket.DAL.csproj",
+        "projectName": "MediaMarket.DAL",
+        "projectPath": "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/MediaMarket.DAL.csproj",
+        "packagesPath": "/home/aladix/.nuget/packages/",
+        "outputPath": "/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/aladix/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/home/aladix/.dotnet/sdk/9.0.308/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

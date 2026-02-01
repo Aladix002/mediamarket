@@ -1,0 +1,16 @@
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/bin/Debug/net9.0/MediaMarket.BL.deps.json
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/bin/Debug/net9.0/MediaMarket.BL.dll
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/bin/Debug/net9.0/MediaMarket.BL.pdb
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/bin/Debug/net9.0/MediaMarket.DAL.dll
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/bin/Debug/net9.0/MediaMarket.DAL.pdb
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/MediaMarket.BL.csproj.AssemblyReference.cache
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/MediaMarket.BL.GeneratedMSBuildEditorConfig.editorconfig
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/MediaMarket.BL.AssemblyInfoInputs.cache
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/MediaMarket.BL.AssemblyInfo.cs
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/MediaMarket.BL.csproj.CoreCompileInputs.cache
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/MediaMarket.BL.sourcelink.json
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/MediaMar.BDB6C945.Up2Date
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/MediaMarket.BL.dll
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/refint/MediaMarket.BL.dll
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/MediaMarket.BL.pdb
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.BL/obj/Debug/net9.0/ref/MediaMarket.BL.dll

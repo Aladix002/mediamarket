@@ -1,0 +1,13 @@
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/bin/Debug/net9.0/MediaMarket.DAL.deps.json
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/bin/Debug/net9.0/MediaMarket.DAL.dll
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/bin/Debug/net9.0/MediaMarket.DAL.pdb
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/MediaMarket.DAL.GeneratedMSBuildEditorConfig.editorconfig
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/MediaMarket.DAL.AssemblyInfoInputs.cache
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/MediaMarket.DAL.AssemblyInfo.cs
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/MediaMarket.DAL.csproj.CoreCompileInputs.cache
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/MediaMarket.DAL.sourcelink.json
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/MediaMarket.DAL.dll
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/refint/MediaMarket.DAL.dll
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/MediaMarket.DAL.pdb
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/ref/MediaMarket.DAL.dll
+/home/aladix/Desktop/AI_Audit/mediamarket/MediaMarket.DAL/obj/Debug/net9.0/MediaMarket.DAL.csproj.AssemblyReference.cache
