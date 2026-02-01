@@ -3,8 +3,8 @@ using MediaMarket.DAL;
 using Supabase;
 using MediaMarket.BL.Security;
 using MediaMarket.BL.Interfaces;
-using MediaMarket.BL.Services.Email;
-using Resend;
+using MediaMarket.API.Endpoints;
+using MediaMarket.API.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +45,14 @@ if (!string.IsNullOrEmpty(resendApiKey))
     });
 }
 
+// Validators
+builder.Services.AddScoped<MediaMarket.API.Validators.RegisterRequestValidator>();
+builder.Services.AddScoped<MediaMarket.API.Validators.Users.CreateUserRequestValidator>();
+builder.Services.AddScoped<MediaMarket.API.Validators.Users.UpdateUserRequestValidator>();
+builder.Services.AddScoped<MediaMarket.API.Validators.Offers.CreateOfferRequestValidator>();
+builder.Services.AddScoped<MediaMarket.API.Validators.Offers.UpdateOfferRequestValidator>();
+builder.Services.AddScoped<MediaMarket.API.Validators.Orders.CreateOrderRequestValidator>();
+
 // Business Logic Services
 builder.Services.AddScoped<MediaMarket.BL.Interfaces.IUserService, MediaMarket.BL.Services.Users.UserService>();
 builder.Services.AddScoped<MediaMarket.BL.Interfaces.IOfferService, MediaMarket.BL.Services.Offers.OfferService>();
@@ -70,5 +78,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+
+// Map endpoints
+app.MapAuthEndpoints();
+app.MapUserEndpoints();
+app.MapOfferEndpoints();
+app.MapOrderEndpoints();
 
 app.Run();

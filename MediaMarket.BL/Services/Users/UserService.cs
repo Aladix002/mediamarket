@@ -28,9 +28,17 @@ public class UserService : IUserService
             .FirstOrDefaultAsync(u => u.Email == email);
     }
 
+    public async Task<List<User>> GetAllAsync()
+    {
+        return await _context.Users
+            .OrderByDescending(u => u.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<User> CreateAsync(User user)
     {
-        // Hash hesla pomocou BCrypt ak nie je uz hashovane
+        // Ak PasswordHash nie je prazdny a nie je uz hashovany, hashni ho
+        // Pre Supabase Auth moze byt PasswordHash prazdny (heslo je v Supabase)
         if (!string.IsNullOrEmpty(user.PasswordHash) && !PasswordHasher.IsHashed(user.PasswordHash))
         {
             user.PasswordHash = PasswordHasher.HashPassword(user.PasswordHash);
