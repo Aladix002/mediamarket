@@ -12,6 +12,7 @@ public class User
     public UserStatus Status { get; set; } = UserStatus.Pending;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     // Polia z CompanyProfile (integrovane do User)
     public string CompanyName { get; set; } = string.Empty; // Povinne

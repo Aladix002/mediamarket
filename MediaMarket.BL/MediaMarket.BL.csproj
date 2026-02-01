@@ -5,7 +5,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="Resend" Version="0.2.1" />
+    <PackageReference Include="Supabase" Version="1.1.1" />
   </ItemGroup>
 
   <PropertyGroup>

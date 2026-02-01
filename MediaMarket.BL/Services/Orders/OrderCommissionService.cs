@@ -1,7 +1,7 @@
 using MediaMarket.DAL.Entities;
 using MediaMarket.DAL.Enums;
 
-namespace MediaMarket.BL.Services;
+namespace MediaMarket.BL.Services.Orders;
 
 public class OrderCommissionService
 {
