@@ -48,8 +48,17 @@ const AddOffer = () => {
     try {
       setSubmitting(true);
 
-      // TODO: Získať mediaUserId z JWT tokenu alebo contextu
-      const mediaUserId = 'temp-media-id'; // Temporary
+      // Získaj mediaUserId z kontextu (uložené po prihlásení)
+      const mediaUserId = userId;
+      if (!mediaUserId) {
+        toast({
+          title: 'Chyba',
+          description: 'Musíte být přihlášeni pro vytvoření nabídky',
+          variant: 'destructive',
+        });
+        navigate('/auth');
+        return;
+      }
 
       // Konvertuj tags na flags enum
       let tagsValue: 0 | 1 | 2 | 4 = 0;

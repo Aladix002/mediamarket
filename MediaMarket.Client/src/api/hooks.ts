@@ -253,3 +253,126 @@ export function useUpdateOrderStatus() {
 
   return { updateStatus, loading, error };
 }
+
+/**
+ * Hook pre registráciu
+ */
+export function useRegister() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const register = useCallback(async (data: {
+    email: string;
+    password: string;
+    companyName: string;
+    contactName: string;
+    phone: string;
+    role: 0 | 1; // 0 = Agency, 1 = Media
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiClient.auth.register({
+        requestBody: data,
+      });
+
+      return response;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Nepodarilo sa zaregistrovat');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { register, loading, error };
+}
+
+/**
+ * Hook pre email verification
+ */
+export function useVerifyEmail() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const verifyEmail = useCallback(async (token: string, type: string = 'signup') => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiClient.auth.verifyEmail({
+        requestBody: {
+          token,
+          type,
+        },
+      });
+
+      if (response.success) {
+        toast({
+          title: 'Úspěch',
+          description: response.message || 'Email byl úspěšně ověřen',
+        });
+      }
+
+      return response;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Nepodařilo se ověřit email');
+      setError(error);
+      toast({
+        title: 'Chyba',
+        description: error.message,
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { verifyEmail, loading, error };
+}
+
+/**
+ * Hook pre resend verification email
+ */
+export function useResendVerification() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const resendVerification = useCallback(async (email: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiClient.auth.resendVerification({
+        requestBody: {
+          email,
+        },
+      });
+
+      if (response.success) {
+        toast({
+          title: 'Úspěch',
+          description: response.message || 'Ověřovací email byl poslán',
+        });
+      }
+
+      return response;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Nepodařilo se poslat ověřovací email');
+      setError(error);
+      toast({
+        title: 'Chyba',
+        description: error.message,
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { resendVerification, loading, error };
+}

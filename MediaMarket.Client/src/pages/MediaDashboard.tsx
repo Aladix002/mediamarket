@@ -18,13 +18,13 @@ import { useOffers, useOrders, useUpdateOrderStatus } from '@/api/hooks';
 
 const MediaDashboard = () => {
   const navigate = useNavigate();
-  const { role } = useApp();
+  const { role, userId } = useApp();
 
-  // TODO: Získať mediaUserId z JWT tokenu alebo contextu
-  const mediaUserId = 'temp-media-id'; // Temporary
+  // Získaj mediaUserId z kontextu (uložené po prihlásení)
+  const mediaUserId = userId;
   
-  const { offers: allOffers, loading: offersLoading } = useOffers({ mediaUserId });
-  const { orders: allOrders, loading: ordersLoading, refetch: refetchOrders } = useOrders({ mediaUserId });
+  const { offers: allOffers, loading: offersLoading } = useOffers(mediaUserId ? { mediaUserId } : undefined);
+  const { orders: allOrders, loading: ordersLoading, refetch: refetchOrders } = useOrders(mediaUserId ? { mediaUserId } : undefined);
   const { updateStatus } = useUpdateOrderStatus();
 
   const myOffers = allOffers;

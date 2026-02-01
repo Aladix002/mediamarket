@@ -18,16 +18,15 @@ const Header = () => {
 
     switch (role) {
       case 'agency':
-        return [...baseLinks, { path: '/agency', label: 'Moje objednávky' }];
+        return [...baseLinks, { path: '/agency', label: 'Moje objednávky' }, { path: '/profile', label: 'Profil' }];
       case 'media':
-        return [...baseLinks, { path: '/media', label: 'Dashboard' }];
+        return [...baseLinks, { path: '/media', label: 'Dashboard' }, { path: '/profile', label: 'Profil' }];
       case 'admin':
-        return [...baseLinks, { path: '/admin', label: 'Administrace' }];
+        return [...baseLinks, { path: '/admin', label: 'Administrace' }, { path: '/profile', label: 'Profil' }];
       default:
         return [
           ...baseLinks,
           { path: '/auth', label: 'Přihlásit' },
-          { path: '/auth?mode=register', label: 'Registrovat se' },
         ];
     }
   };

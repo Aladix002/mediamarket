@@ -85,8 +85,17 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     e.preventDefault();
 
     try {
-      // TODO: Získať agencyUserId z JWT tokenu alebo contextu
-      const agencyUserId = 'temp-agency-id'; // Temporary - treba nahradiť skutočným ID
+      // Získaj agencyUserId z kontextu (uložené po prihlásení)
+      const agencyUserId = userId;
+      if (!agencyUserId) {
+        toast({
+          title: 'Chyba',
+          description: 'Musíte být přihlášeni pro vytvoření objednávky',
+          variant: 'destructive',
+        });
+        navigate('/auth');
+        return;
+      }
 
       const order = await createOrder(
         offer.id,

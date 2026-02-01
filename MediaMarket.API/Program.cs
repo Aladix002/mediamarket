@@ -59,6 +59,7 @@ if (!string.IsNullOrEmpty(resendApiKey))
 
 // Validators
 builder.Services.AddScoped<MediaMarket.API.Validators.RegisterRequestValidator>();
+builder.Services.AddScoped<MediaMarket.API.Validators.LoginRequestValidator>();
 builder.Services.AddScoped<MediaMarket.API.Validators.Users.CreateUserRequestValidator>();
 builder.Services.AddScoped<MediaMarket.API.Validators.Users.UpdateUserRequestValidator>();
 builder.Services.AddScoped<MediaMarket.API.Validators.Offers.CreateOfferRequestValidator>();

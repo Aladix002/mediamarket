@@ -8,12 +8,12 @@ import { OrderStatus } from '@/data/mockData';
 import { useOrders } from '@/api/hooks';
 
 const AgencyDashboard = () => {
-  const { role } = useApp();
+  const { role, userId } = useApp();
   const navigate = useNavigate();
   
-  // TODO: Získať agencyUserId z JWT tokenu alebo contextu
-  const agencyUserId = 'temp-agency-id'; // Temporary
-  const { orders, loading } = useOrders({ agencyUserId });
+  // Získaj agencyUserId z kontextu (uložené po prihlásení)
+  const agencyUserId = userId;
+  const { orders, loading } = useOrders(agencyUserId ? { agencyUserId } : undefined);
 
   const orderStatusStyles: Record<OrderStatus, string> = {
     'nová': 'status-nova',

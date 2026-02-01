@@ -8,6 +8,8 @@ interface AppContextType {
   setRole: (role: UserRole) => void;
   userId: string | null;
   setUserId: (userId: string | null) => void;
+  accessToken: string | null;
+  setAccessToken: (token: string | null) => void;
   // Legacy inquiries (for backward compatibility - deprecated)
   inquiries: Inquiry[];
   addInquiry: (inquiry: Inquiry) => void;
@@ -17,8 +19,31 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<UserRole>('visitor');
-  const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(() => {
+    return localStorage.getItem('userId');
+  });
+  const [accessToken, setAccessTokenState] = useState<string | null>(() => {
+    return localStorage.getItem('accessToken');
+  });
   const [inquiries, setInquiries] = useState<Inquiry[]>([]); // Legacy - deprecated
+
+  const setAccessToken = (token: string | null) => {
+    setAccessTokenState(token);
+    if (token) {
+      localStorage.setItem('accessToken', token);
+    } else {
+      localStorage.removeItem('accessToken');
+    }
+  };
+
+  const setUserIdWithStorage = (id: string | null) => {
+    setUserId(id);
+    if (id) {
+      localStorage.setItem('userId', id);
+    } else {
+      localStorage.removeItem('userId');
+    }
+  };
 
   const addInquiry = (inquiry: Inquiry) => {
     setInquiries(prev => [inquiry, ...prev]);
@@ -29,7 +54,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       role, 
       setRole,
       userId,
-      setUserId,
+      setUserId: setUserIdWithStorage,
+      accessToken,
+      setAccessToken,
       inquiries, 
       addInquiry,
     }}>

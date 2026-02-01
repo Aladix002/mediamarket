@@ -15,6 +15,8 @@ import MediaDashboard from "./pages/MediaDashboard";
 import AddOffer from "./pages/AddOffer";
 import AdminDashboard from "./pages/AdminDashboard";
 import TermsPage from "./pages/TermsPage";
+import ProfilePage from "./pages/ProfilePage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +45,8 @@ const App = () => (
                 <Route path="/media" element={<MediaDashboard />} />
                 <Route path="/media/offers/new" element={<AddOffer />} />
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/verify-email" element={<VerifyEmailPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

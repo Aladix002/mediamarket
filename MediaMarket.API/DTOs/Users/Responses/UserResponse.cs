@@ -10,7 +10,6 @@ public class UserResponse
     public UserRole Role { get; set; }
     public UserStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime? LastLoginAt { get; set; }
     public string CompanyName { get; set; } = string.Empty;
     public string ContactName { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
