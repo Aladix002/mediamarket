@@ -3,20 +3,67 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Loader2 } from 'lucide-react';
+import { apiClient } from '@/api/client';
+import { toast } from '@/hooks/use-toast';
+import { useApp } from '@/contexts/AppContext';
 
 const AuthPage = () => {
+  const { setRole } = useApp();
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     company: '',
     email: '',
     role: '',
+    phone: '',
+    password: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    
+    try {
+      setSubmitting(true);
+
+      const response = await apiClient.auth.register({
+        requestBody: {
+          email: formData.email,
+          password: formData.password,
+          companyName: formData.company,
+          contactName: formData.name,
+          phone: formData.phone,
+          role: formData.role === 'agency' ? 0 : formData.role === 'media' ? 1 : 0,
+        },
+      });
+
+      if (response.success) {
+        // Nastav rolu v contextu
+        setRole(formData.role as 'agency' | 'media');
+        
+        toast({
+          title: 'Úspech',
+          description: 'Registrácia bola úspešná. Overte si email.',
+        });
+
+        setSubmitted(true);
+      } else {
+        toast({
+          title: 'Chyba',
+          description: response.message || 'Nepodarilo sa zaregistrovat',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Chyba',
+        description: error instanceof Error ? error.message : 'Nepodarilo sa zaregistrovat',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -91,6 +138,31 @@ const AuthPage = () => {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="phone">Telefon</Label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="+420 xxx xxx xxx"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Heslo</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Minimálne 8 znakov"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+              minLength={8}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="role">Jsem</Label>
             <Select
               value={formData.role}
@@ -107,8 +179,15 @@ const AuthPage = () => {
             </Select>
           </div>
 
-          <Button type="submit" className="w-full" size="lg">
-            Odeslat žádost
+          <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Registrujem...
+              </>
+            ) : (
+              'Odeslat žádost'
+            )}
           </Button>
 
           <p className="text-xs text-muted-foreground text-center">

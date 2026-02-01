@@ -6,8 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Save, Send } from 'lucide-react';
+import { ArrowLeft, Save, Send, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { apiClient } from '@/api/client';
+import { MediaTypeMap, OfferTagMap, OfferStatusMap, PricingModelMap } from '@/api/mappers';
+import { toast } from '@/hooks/use-toast';
 
 const AddOffer = () => {
   const navigate = useNavigate();
@@ -39,9 +42,66 @@ const AddOffer = () => {
     'akce': false,
   });
 
-  const handleSubmit = (action: 'draft' | 'publish') => {
-    // Mock action - just navigate back
-    navigate('/media');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (action: 'draft' | 'publish') => {
+    try {
+      setSubmitting(true);
+
+      // TODO: Získať mediaUserId z JWT tokenu alebo contextu
+      const mediaUserId = 'temp-media-id'; // Temporary
+
+      // Konvertuj tags na flags enum
+      let tagsValue: 0 | 1 | 2 | 4 = 0;
+      if (tags['akce']) tagsValue = (tagsValue | 1) as 0 | 1 | 2 | 4;
+      if (tags['speciál']) tagsValue = (tagsValue | 2) as 0 | 1 | 2 | 4;
+      if (tags['last-minute']) tagsValue = (tagsValue | 4) as 0 | 1 | 2 | 4;
+
+      // Urči pricing model
+      const pricingModel = formData.pricePerUnit ? PricingModelMap.unit : PricingModelMap.cpt;
+
+      const response = await apiClient.offers.createOffer({
+        mediaUserId,
+        requestBody: {
+          title: formData.title,
+          mediaType: MediaTypeMap[formData.mediaType as keyof typeof MediaTypeMap] || 0,
+          format: formData.format,
+          description: formData.description,
+          pricingModel,
+          unitPrice: formData.pricePerUnit ? parseFloat(formData.pricePerUnit) : null,
+          cpt: formData.cpt ? parseFloat(formData.cpt) : null,
+          minOrderValue: formData.minOrderValue ? parseFloat(formData.minOrderValue) : null,
+          discountPercent: 0, // TODO: Pridať do formulára
+          tags: tagsValue,
+          deadlineAssetsAt: formData.deadline || null,
+          lastOrderDay: formData.lastOrderDate || null,
+          validFrom: formData.validFrom,
+          validTo: formData.validTo,
+          technicalConditionsText: formData.technicalConditionsText || null,
+          technicalConditionsUrl: formData.technicalConditionsUrl || null,
+        },
+      });
+
+      // Ak je publish, publikuj ponuku
+      if (action === 'publish' && response.id) {
+        await apiClient.offers.publishOffer({ id: response.id });
+      }
+
+      toast({
+        title: 'Úspech',
+        description: action === 'publish' ? 'Ponuka bola úspešne publikovaná' : 'Ponuka bola uložená ako draft',
+      });
+
+      navigate('/media');
+    } catch (error) {
+      toast({
+        title: 'Chyba',
+        description: error instanceof Error ? error.message : 'Nepodarilo sa vytvorit ponuku',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleTagChange = (tag: keyof typeof tags) => {
@@ -325,13 +385,42 @@ const AddOffer = () => {
 
           {/* Submit buttons */}
           <div className="flex gap-3">
-            <Button type="button" variant="outline" onClick={() => handleSubmit('draft')} className="flex-1">
-              <Save className="mr-2 h-4 w-4" />
-              Uložit draft
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => handleSubmit('draft')} 
+              className="flex-1"
+              disabled={submitting}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Ukladám...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Uložit draft
+                </>
+              )}
             </Button>
-            <Button type="button" onClick={() => handleSubmit('publish')} className="flex-1">
-              <Send className="mr-2 h-4 w-4" />
-              Publikovat
+            <Button 
+              type="button" 
+              onClick={() => handleSubmit('publish')} 
+              className="flex-1"
+              disabled={submitting}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Publikujem...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Publikovat
+                </>
+              )}
             </Button>
           </div>
         </form>

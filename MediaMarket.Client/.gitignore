@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated API files
+src/api/generated
+
+# OpenAPI JSON (if downloaded manually)
+openapi.json

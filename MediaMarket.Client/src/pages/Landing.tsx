@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import OfferCard from '@/components/OfferCard';
-import { mockOffers } from '@/data/mockData';
 import { useApp } from '@/contexts/AppContext';
 import { ArrowRight, Zap, MessageSquare, Handshake } from 'lucide-react';
 import PartnersTicker from '@/components/PartnersTicker';
+import { useOffers } from '@/api/hooks';
 
 const Landing = () => {
   const { role } = useApp();
-  const featuredOffers = mockOffers.filter(o => o.status === 'published').slice(0, 6);
+  const { offers } = useOffers({ status: 'published' });
+  const featuredOffers = offers.slice(0, 6);
 
   return (
     <div className="min-h-screen">

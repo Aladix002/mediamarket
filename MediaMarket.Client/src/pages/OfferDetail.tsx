@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { mockOffers, OfferTag } from '@/data/mockData';
+import { OfferTag } from '@/data/mockData';
 import OrderModal from '@/components/OrderModal';
 import { useApp } from '@/contexts/AppContext';
+import { useOffer } from '@/api/hooks';
 import {
   ArrowLeft,
   Calendar,
@@ -14,6 +15,7 @@ import {
   AlertCircle,
   Download,
   ExternalLink,
+  Loader2,
 } from 'lucide-react';
 
 const tagLabels: Record<OfferTag, string> = {
@@ -43,13 +45,23 @@ const OfferDetail = () => {
   const { role } = useApp();
   const [orderOpen, setOrderOpen] = useState(false);
 
-  const offer = mockOffers.find((o) => o.id === id);
+  const { offer, loading, error } = useOffer(id);
   
   // Check if offer is "Online" type - always use CPT
   const isOnline = offer?.mediaType.toLowerCase() === 'online';
   const canOrder = !isOnline || (isOnline && offer?.cpt);
 
-  if (!offer) {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background py-8">
+        <div className="container mx-auto px-4 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !offer) {
     return (
       <div className="min-h-screen bg-background py-8">
         <div className="container mx-auto px-4 text-center">

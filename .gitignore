@@ -69,3 +69,8 @@ packages/
 
 # Migrations (optional - if you want to track them, remove this)
 # MediaMarket.DAL/Migrations/
+
+# Log files
+*.log
+backend.log
+frontend.log

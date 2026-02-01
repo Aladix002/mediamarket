@@ -11,6 +11,18 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 
+// CORS - povol poziadavky z frontendu
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:8080")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 // Database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -59,10 +71,41 @@ builder.Services.AddScoped<MediaMarket.BL.Interfaces.IOfferService, MediaMarket.
 builder.Services.AddScoped<MediaMarket.BL.Interfaces.IOrderService, MediaMarket.BL.Services.Orders.OrderService>();
 builder.Services.AddScoped<MediaMarket.BL.Services.Orders.OrderCommissionService>();
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// OpenAPI / Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new()
+    {
+        Title = "MediaMarket API",
+        Version = "v1",
+        Description = "API pre MediaMarket platformu - sprostredkovanie medzi mediami a agenturami",
+        Contact = new()
+        {
+            Name = "MediaMarket",
+            Email = "info@mediamarket.com"
+        }
+    });
+
+    // Pridaj XML komentare ak existuju
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
+
+    // Enumy ako stringy v Swagger UI
+    c.UseInlineDefinitionsForEnums();
+    
+    // Pridaj JSON serializer options pre enumy
+    c.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
+});
 
 var app = builder.Build();
+
+// CORS middleware - musi byt na zaciatku, pred vsetkym ostatnym
+app.UseCors();
 
 // Initialize database with seed data
 using (var scope = app.Services.CreateScope())
@@ -74,7 +117,16 @@ using (var scope = app.Services.CreateScope())
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "MediaMarket API v1");
+        c.RoutePrefix = string.Empty; // Swagger UI na root URL
+        c.DisplayRequestDuration();
+        c.EnableDeepLinking();
+        c.EnableFilter();
+        c.ShowExtensions();
+    });
 }
 
 app.MapControllers();

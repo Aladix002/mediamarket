@@ -3,12 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/contexts/AppContext';
 import EmptyState from '@/components/EmptyState';
-import { ExternalLink, Inbox } from 'lucide-react';
+import { ExternalLink, Inbox, Loader2 } from 'lucide-react';
 import { OrderStatus } from '@/data/mockData';
+import { useOrders } from '@/api/hooks';
 
 const AgencyDashboard = () => {
-  const { orders } = useApp();
+  const { role } = useApp();
   const navigate = useNavigate();
+  
+  // TODO: Získať agencyUserId z JWT tokenu alebo contextu
+  const agencyUserId = 'temp-agency-id'; // Temporary
+  const { orders, loading } = useOrders({ agencyUserId });
 
   const orderStatusStyles: Record<OrderStatus, string> = {
     'nová': 'status-nova',
@@ -52,8 +57,15 @@ const AgencyDashboard = () => {
           </Link>
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
         {/* Orders list */}
-        {orders.length > 0 ? (
+        {!loading && orders.length > 0 && (
           <div className="space-y-4">
             {orders.map((order) => (
               <div
@@ -106,7 +118,9 @@ const AgencyDashboard = () => {
               </div>
             ))}
           </div>
-        ) : (
+        )}
+
+        {!loading && orders.length === 0 && (
           <EmptyState
             icon={Inbox}
             title="Zatím nemáte žádné objednávky"

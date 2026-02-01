@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import OfferCard from '@/components/OfferCard';
 import EmptyState from '@/components/EmptyState';
-import { mockOffers, MediaType, OfferTag, publishers, Publisher } from '@/data/mockData';
-import { Search, SlidersHorizontal, X, FileX } from 'lucide-react';
+import { MediaType, OfferTag, publishers, Publisher } from '@/data/mockData';
+import { Search, SlidersHorizontal, X, FileX, Loader2 } from 'lucide-react';
+import { useOffers } from '@/api/hooks';
 
 const mediaTypes: { value: MediaType | 'all'; label: string }[] = [
   { value: 'all', label: 'Všechny typy' },
@@ -50,7 +51,9 @@ const OffersListing = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
 
-  const publishedOffers = mockOffers.filter(o => o.status === 'published');
+  // Načítaj ponuky z API
+  const { offers: allOffers, loading } = useOffers({ status: 'published' });
+  const publishedOffers = allOffers;
 
   const toggleDiscountFilter = (value: string) => {
     setDiscountFilter(prev => 
@@ -261,21 +264,32 @@ const OffersListing = () => {
           </div>
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
         {/* Results count */}
-        <div className="mb-4">
-          <p className="text-sm text-muted-foreground">
-            {filteredOffers.length} {filteredOffers.length === 1 ? 'nabídka' : filteredOffers.length < 5 ? 'nabídky' : 'nabídek'}
-          </p>
-        </div>
+        {!loading && (
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground">
+              {filteredOffers.length} {filteredOffers.length === 1 ? 'nabídka' : filteredOffers.length < 5 ? 'nabídky' : 'nabídek'}
+            </p>
+          </div>
+        )}
 
         {/* Offers grid */}
-        {filteredOffers.length > 0 ? (
+        {!loading && filteredOffers.length > 0 && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredOffers.map((offer) => (
               <OfferCard key={offer.id} offer={offer} />
             ))}
           </div>
-        ) : (
+        )}
+
+        {!loading && filteredOffers.length === 0 && (
           <EmptyState
             icon={FileX}
             title="Žádné výsledky"

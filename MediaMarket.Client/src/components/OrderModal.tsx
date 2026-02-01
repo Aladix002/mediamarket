@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
-import { Offer, Order, generateOrderId } from '@/data/mockData';
+import { Offer } from '@/data/mockData';
+import { useCreateOrder } from '@/api/hooks';
 
 interface OrderModalProps {
   offer: Offer;
@@ -18,7 +19,9 @@ interface OrderModalProps {
 }
 
 const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
-  const { addOrder } = useApp();
+  const { role } = useApp();
+  const navigate = useNavigate();
+  const { createOrder, loading: creatingOrder } = useCreateOrder();
   const [submitted, setSubmitted] = useState(false);
   const [newOrderId, setNewOrderId] = useState('');
 
@@ -78,39 +81,30 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     }).format(price);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const orderId = generateOrderId();
-    
-    const newOrder: Order = {
-      id: `ord-${Date.now()}`,
-      orderId,
-      offerId: offer.id,
-      offerTitle: offer.title,
-      mediaId: offer.mediaId,
-      mediaName: offer.mediaName,
-      agencyId: 'ag1', // Mock agency ID
-      status: 'nová',
-      createdAt: new Date().toISOString().split('T')[0],
-      preferredFrom: formData.preferredFrom,
-      preferredTo: formData.preferredTo,
-      pricingType,
-      unitPrice: pricingType === 'unit' ? offer.pricePerUnit : undefined,
-      cptValue: pricingType === 'cpt' ? offer.cpt : undefined,
-      quantity: pricingType === 'unit' ? parseInt(formData.quantity) : undefined,
-      impressions: pricingType === 'cpt' ? normalizedImpressions : undefined,
-      totalPrice,
-      finalClient: formData.finalClient || undefined,
-      note: formData.note,
-      contactName: formData.contactName,
-      contactEmail: formData.contactEmail,
-      contactPhone: formData.contactPhone,
-    };
+    try {
+      // TODO: Získať agencyUserId z JWT tokenu alebo contextu
+      const agencyUserId = 'temp-agency-id'; // Temporary - treba nahradiť skutočným ID
 
-    addOrder(newOrder);
-    setNewOrderId(orderId);
-    setSubmitted(true);
+      const order = await createOrder(
+        offer.id,
+        agencyUserId,
+        {
+          preferredFrom: formData.preferredFrom,
+          preferredTo: formData.preferredTo,
+          quantityUnits: pricingType === 'unit' ? parseInt(formData.quantity) : undefined,
+          impressions: pricingType === 'cpt' ? normalizedImpressions : undefined,
+          note: formData.note,
+        }
+      );
+
+      setNewOrderId(order.orderId);
+      setSubmitted(true);
+    } catch (error) {
+      // Error je už spracovaný v hooku
+    }
   };
 
   const handleClose = () => {
@@ -366,18 +360,26 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
 
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={creatingOrder}>
               Zrušit
             </Button>
             <Button 
               type="submit" 
               className="flex-1"
               disabled={
+                creatingOrder ||
                 (offer.minOrderValue && totalPrice < offer.minOrderValue) ||
                 (pricingType === 'cpt' && normalizedImpressions === 0)
               }
             >
-              Odeslat objednávku
+              {creatingOrder ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Odesílám...
+                </>
+              ) : (
+                'Odeslat objednávku'
+              )}
             </Button>
           </div>
 

@@ -10,21 +10,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockOffers, OrderStatus } from '@/data/mockData';
+import { OrderStatus } from '@/data/mockData';
 import { useApp } from '@/contexts/AppContext';
 import EmptyState from '@/components/EmptyState';
-import { Plus, Edit, Archive, FileText, Inbox, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Archive, FileText, Inbox, ExternalLink, Loader2 } from 'lucide-react';
+import { useOffers, useOrders, useUpdateOrderStatus } from '@/api/hooks';
 
 const MediaDashboard = () => {
   const navigate = useNavigate();
-  const { orders, updateOrderStatus, role } = useApp();
+  const { role } = useApp();
 
-  // Simulate media's own offers (using first 8 offers as "mine")
-  const myOffers = mockOffers.slice(0, 8);
-  // Filter orders for my offers
-  const myOrders = orders.filter(order => 
-    myOffers.some(offer => offer.id === order.offerId)
-  );
+  // TODO: Získať mediaUserId z JWT tokenu alebo contextu
+  const mediaUserId = 'temp-media-id'; // Temporary
+  
+  const { offers: allOffers, loading: offersLoading } = useOffers({ mediaUserId });
+  const { orders: allOrders, loading: ordersLoading, refetch: refetchOrders } = useOrders({ mediaUserId });
+  const { updateStatus } = useUpdateOrderStatus();
+
+  const myOffers = allOffers;
+  const myOrders = allOrders;
 
   const statusStyles: Record<string, string> = {
     draft: 'bg-secondary text-secondary-foreground',
@@ -60,8 +64,13 @@ const MediaDashboard = () => {
     });
   };
 
-  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    updateOrderStatus(orderId, newStatus);
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      await updateStatus(orderId, newStatus);
+      refetchOrders();
+    } catch (error) {
+      // Error je už spracovaný v hooku
+    }
   };
 
   const canChangeStatus = role === 'media' || role === 'admin';
@@ -89,7 +98,13 @@ const MediaDashboard = () => {
         <section className="mb-12">
           <h2 className="font-display text-xl font-semibold mb-4">Moje nabídky</h2>
 
-          {myOffers.length > 0 ? (
+          {offersLoading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {!offersLoading && myOffers.length > 0 && (
             <div className="bg-card rounded-xl border overflow-hidden">
               <Table>
                 <TableHeader>
@@ -141,7 +156,9 @@ const MediaDashboard = () => {
                 </TableBody>
               </Table>
             </div>
-          ) : (
+          )}
+
+          {!offersLoading && myOffers.length === 0 && (
             <EmptyState
               icon={FileText}
               title="Zatím nemáte žádné nabídky"
@@ -156,7 +173,13 @@ const MediaDashboard = () => {
         <section>
           <h2 className="font-display text-xl font-semibold mb-4">Objednávky na moje nabídky</h2>
 
-          {myOrders.length > 0 ? (
+          {ordersLoading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {!ordersLoading && myOrders.length > 0 && (
             <div className="space-y-4">
               {myOrders.map((order) => (
                 <div
@@ -231,7 +254,9 @@ const MediaDashboard = () => {
                 </div>
               ))}
             </div>
-          ) : (
+          )}
+
+          {!ordersLoading && myOrders.length === 0 && (
             <EmptyState
               icon={Inbox}
               title="Zatím nemáte žádné objednávky"
