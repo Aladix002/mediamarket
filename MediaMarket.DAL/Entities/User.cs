@@ -16,6 +16,7 @@ public class User
     public string CompanyName { get; set; } = string.Empty; // Povinne
     public string ContactName { get; set; } = string.Empty; // Povinne
     public string Phone { get; set; } = string.Empty; // Povinne
+    public string Ico { get; set; } = string.Empty; // IČO firmy (8 cislic) - validovane cez ARES
 
     // Navigacne vlastnosti
     public ICollection<Offer> Offers { get; set; } = new List<Offer>();

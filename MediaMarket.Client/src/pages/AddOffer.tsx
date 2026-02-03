@@ -56,7 +56,7 @@ const AddOffer = () => {
           description: 'Musíte být přihlášeni pro vytvoření nabídky',
           variant: 'destructive',
         });
-        navigate('/auth');
+        navigate('/login');
         return;
       }
 

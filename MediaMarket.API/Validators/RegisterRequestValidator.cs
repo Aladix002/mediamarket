@@ -20,8 +20,8 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .MaximumLength(100).WithMessage("Heslo moze mat maximalne 100 znakov");
 
         RuleFor(x => x.CompanyName)
-            .NotEmpty().WithMessage("Nazov spolocnosti je povinny")
-            .MaximumLength(255).WithMessage("Nazov spolocnosti moze mat maximalne 255 znakov");
+            .MaximumLength(255).WithMessage("Nazov spolocnosti moze mat maximalne 255 znakov")
+            .When(x => !string.IsNullOrWhiteSpace(x.CompanyName)); // Voliteľné - ak nie je zadané, získa sa z ARES
 
         RuleFor(x => x.ContactName)
             .NotEmpty().WithMessage("Kontaktna osoba je povinna")
@@ -36,6 +36,21 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .IsInEnum().WithMessage("Neplatna rola")
             .Must(role => role == UserRole.Agency || role == UserRole.Media)
             .WithMessage("Rola musi byt Agency alebo Media");
+
+        RuleFor(x => x.Ico)
+            .NotEmpty().WithMessage("IČO je povinné")
+            .Must(BeValidIco).WithMessage("IČO musí obsahovať presne 8 číslic");
+    }
+
+    private static bool BeValidIco(string? ico)
+    {
+        if (string.IsNullOrWhiteSpace(ico))
+        {
+            return false;
+        }
+
+        // IČO musí obsahovať presne 8 číslic
+        return System.Text.RegularExpressions.Regex.IsMatch(ico, @"^\d{8}$");
     }
 
     private static bool BeValidPhone(string? phone)

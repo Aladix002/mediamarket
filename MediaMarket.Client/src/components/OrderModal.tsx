@@ -93,7 +93,7 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
           description: 'Musíte být přihlášeni pro vytvoření objednávky',
           variant: 'destructive',
         });
-        navigate('/auth');
+        navigate('/login');
         return;
       }
 

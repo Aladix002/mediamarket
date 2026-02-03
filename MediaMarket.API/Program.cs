@@ -72,6 +72,9 @@ builder.Services.AddScoped<MediaMarket.BL.Interfaces.IOfferService, MediaMarket.
 builder.Services.AddScoped<MediaMarket.BL.Interfaces.IOrderService, MediaMarket.BL.Services.Orders.OrderService>();
 builder.Services.AddScoped<MediaMarket.BL.Services.Orders.OrderCommissionService>();
 
+// ARES Service
+builder.Services.AddHttpClient<MediaMarket.BL.Interfaces.IARESService, MediaMarket.BL.Services.ARES.ARESService>();
+
 // OpenAPI / Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

@@ -40,7 +40,7 @@ const VerifyEmailPage = () => {
       if (response.success) {
         setVerified(true);
         setTimeout(() => {
-          navigate('/auth?mode=login');
+          navigate('/login');
         }, 3000);
       }
     } catch (err) {
@@ -78,7 +78,7 @@ const VerifyEmailPage = () => {
           <p className="text-muted-foreground mb-6">
             Váš email byl úspěšně ověřen. Nyní se můžete přihlásit.
           </p>
-          <Button onClick={() => navigate('/auth?mode=login')}>
+            <Button onClick={() => navigate('/login')}>
             Přihlásit se
           </Button>
         </div>
@@ -185,7 +185,7 @@ const VerifyEmailPage = () => {
             <Button
               type="button"
               variant="link"
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate('/login')}
             >
               Zpět na přihlášení
             </Button>

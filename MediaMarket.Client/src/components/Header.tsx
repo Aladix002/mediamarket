@@ -26,7 +26,7 @@ const Header = () => {
       default:
         return [
           ...baseLinks,
-          { path: '/auth', label: 'Přihlásit' },
+          { path: '/login', label: 'Přihlásit' },
         ];
     }
   };

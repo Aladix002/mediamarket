@@ -58,13 +58,37 @@ public static class AuthEndpoints
             .WithSummary("Poslanie znova verification emailu")
             .Produces<VerifyEmailResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest);
+
+        // ARES endpoint pre získanie názvu firmy
+        var aresGroup = app.MapGroup("/api/ares").WithTags("ARES");
+        aresGroup.MapGet("/company/{ico}", GetCompanyNameFromAresAsync)
+            .WithName("GetCompanyNameFromAres")
+            .WithSummary("Získanie názvu firmy z ARES podľa IČO")
+            .Produces<object>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
+    }
+    
+    private static async Task<IResult> GetCompanyNameFromAresAsync(
+        string ico,
+        [FromServices] MediaMarket.BL.Interfaces.IARESService aresService)
+    {
+        var (companyName, errorMessage) = await aresService.GetCompanyNameAsync(ico);
+        
+        if (string.IsNullOrWhiteSpace(companyName))
+        {
+            return Results.BadRequest(new { error = errorMessage ?? "Nepodarilo sa získať názov firmy z ARES" });
+        }
+        
+        return Results.Ok(new { companyName });
     }
 
     private static async Task<IResult> RegisterAsync(
         [FromBody] RegisterRequest request,
         [FromServices] IAuthService authService,
         [FromServices] IUserService userService,
-        [FromServices] RegisterRequestValidator validator)
+        [FromServices] RegisterRequestValidator validator,
+        [FromServices] MediaMarket.BL.Interfaces.IARESService aresService)
     {
         // Validacia
         var validationResult = await validator.ValidateAsync(request);
@@ -89,12 +113,39 @@ public static class AuthEndpoints
             });
         }
 
+        // Získaj názov firmy z ARES ak nie je zadaný
+        string companyName = request.CompanyName ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(companyName))
+        {
+            var (aresCompanyName, aresError) = await aresService.GetCompanyNameAsync(request.Ico);
+            if (string.IsNullOrWhiteSpace(aresCompanyName))
+            {
+                return Results.BadRequest(new RegisterResponse
+                {
+                    Success = false,
+                    Message = aresError ?? "Nepodarilo sa získať názov firmy z ARES registra"
+                });
+            }
+            companyName = aresCompanyName;
+        }
+
+        // ARES validacia - overenie firmy a emailovej domeny
+        var (isValid, aresErrorMessage) = await aresService.ValidateCompanyAsync(request.Ico, companyName, request.Email);
+        if (!isValid)
+        {
+            return Results.BadRequest(new RegisterResponse
+            {
+                Success = false,
+                Message = aresErrorMessage ?? "Overenie firmy v ARES zlyhalo"
+            });
+        }
+
         try
         {
             // 1. Registracia v Supabase Auth
             var metadata = new Dictionary<string, object>
             {
-                { "company_name", request.CompanyName },
+                { "company_name", companyName },
                 { "contact_name", request.ContactName },
                 { "phone", request.Phone },
                 { "role", request.Role.ToString() }
@@ -200,9 +251,10 @@ public static class AuthEndpoints
                 PasswordHash = string.Empty, // Heslo je v Supabase, nie v nasej DB
                 Role = request.Role,
                 Status = UserStatus.Pending, // Caka na schvalenie adminom
-                CompanyName = request.CompanyName,
+                CompanyName = companyName, // Použi názov firmy z ARES
                 ContactName = request.ContactName,
                 Phone = request.Phone,
+                Ico = request.Ico,
                 CreatedAt = DateTime.UtcNow
             };
 

@@ -9,7 +9,8 @@ import Footer from "@/components/Footer";
 import Landing from "./pages/Landing";
 import OffersListing from "./pages/OffersListing";
 import OfferDetail from "./pages/OfferDetail";
-import AuthPage from "./pages/AuthPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import AgencyDashboard from "./pages/AgencyDashboard";
 import MediaDashboard from "./pages/MediaDashboard";
 import AddOffer from "./pages/AddOffer";
@@ -40,7 +41,8 @@ const App = () => (
                 <Route path="/" element={<Landing />} />
                 <Route path="/offers" element={<OffersListing />} />
                 <Route path="/offers/:id" element={<OfferDetail />} />
-                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
                 <Route path="/agency" element={<AgencyDashboard />} />
                 <Route path="/media" element={<MediaDashboard />} />
                 <Route path="/media/offers/new" element={<AddOffer />} />

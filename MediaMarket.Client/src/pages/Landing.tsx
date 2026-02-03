@@ -24,7 +24,7 @@ const Landing = () => {
               Marketplace pro média a agentury. Formáty a ceny přehledně bez chaosu v emailech
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to={role === 'visitor' ? '/auth' : '/media'}>
+              <Link to={role === 'visitor' ? '/register' : '/media'}>
                 <Button size="lg" className="btn-hero-secondary w-full sm:w-auto">
                   Nabízím mediální prostor
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -109,7 +109,7 @@ const Landing = () => {
               Ať už jste médium hledající nové klienty, nebo agentura hledající výhodné nabídky – 
               MediaMarket je tu pro vás.
             </p>
-            <Link to="/auth">
+            <Link to="/register">
               <Button size="lg" className="btn-hero-primary">
                 Požádat o přístup
                 <ArrowRight className="ml-2 h-4 w-4" />

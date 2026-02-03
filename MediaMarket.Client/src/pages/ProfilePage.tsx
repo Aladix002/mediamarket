@@ -26,7 +26,7 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (!accessToken) {
-      navigate('/auth');
+      navigate('/login');
       return;
     }
 
@@ -58,7 +58,7 @@ const ProfilePage = () => {
         setAccessToken(null);
         setUserId(null);
         setRole('visitor');
-        navigate('/auth');
+        navigate('/login');
       }
     } finally {
       setLoading(false);
