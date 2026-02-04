@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediaMarket.API.DTOs.Orders.Requests;
+using MediaMarket.DAL.Enums;
 
 namespace MediaMarket.API.Validators.Orders;
 
@@ -10,7 +11,11 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
         RuleFor(x => x.OfferId)
             .NotEmpty().WithMessage("ID ponuky je povinne");
 
+        RuleFor(x => x.PreferredFrom)
+            .NotEmpty().WithMessage("Datum od je povinny");
+
         RuleFor(x => x.PreferredTo)
+            .NotEmpty().WithMessage("Datum do je povinny")
             .GreaterThan(x => x.PreferredFrom).WithMessage("Datum do musi byt neskor ako datum od");
 
         RuleFor(x => x.QuantityUnits)
@@ -23,5 +28,11 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
 
         RuleFor(x => x.Note)
             .MaximumLength(1000).WithMessage("Poznamka moze mat maximalne 1000 znakov");
+
+        // Validacia: musi byt vyplneny QuantityUnits alebo Impressions (a musi byt > 0)
+        RuleFor(x => x)
+            .Must(x => (x.QuantityUnits.HasValue && x.QuantityUnits.Value > 0) || 
+                       (x.Impressions.HasValue && x.Impressions.Value > 0))
+            .WithMessage("Musite vyplnit bud pocet jednotiek (1-100) alebo pocet impresii (vacsi ako 0)");
     }
 }

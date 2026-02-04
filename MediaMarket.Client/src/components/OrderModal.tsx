@@ -11,6 +11,7 @@ import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { Offer } from '@/data/mockData';
 import { useCreateOrder } from '@/api/hooks';
+import { toast } from '@/hooks/use-toast';
 
 interface OrderModalProps {
   offer: Offer;
@@ -19,7 +20,7 @@ interface OrderModalProps {
 }
 
 const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
-  const { role } = useApp();
+  const { role, userId } = useApp();
   const navigate = useNavigate();
   const { createOrder, loading: creatingOrder } = useCreateOrder();
   const [submitted, setSubmitted] = useState(false);
@@ -49,9 +50,6 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     impressions: '',
     finalClient: '',
     note: '',
-    contactName: '',
-    contactEmail: '',
-    contactPhone: '',
   });
 
   // Normalize impressions input (remove spaces, convert to number)
@@ -61,15 +59,23 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     return isNaN(num) || num <= 0 ? 0 : num;
   }, [formData.impressions]);
 
-  // Calculate total price
+  // Calculate total price (with discount)
   const totalPrice = useMemo(() => {
+    let basePrice = 0;
+    
     if (pricingType === 'unit' && offer.pricePerUnit) {
       const qty = parseInt(formData.quantity) || 0;
-      return offer.pricePerUnit * qty;
+      basePrice = offer.pricePerUnit * qty;
     } else if (pricingType === 'cpt' && offer.cpt) {
-      return (normalizedImpressions / 1000) * offer.cpt;
+      basePrice = (normalizedImpressions / 1000) * offer.cpt;
     }
-    return 0;
+    
+    // Aplikuj zľavu ak existuje
+    if (basePrice > 0 && offer.discountPercent > 0) {
+      return basePrice * (1 - offer.discountPercent / 100);
+    }
+    
+    return basePrice;
   }, [pricingType, offer, formData.quantity, normalizedImpressions]);
 
   const formatPrice = (price: number) => {
@@ -85,9 +91,46 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     e.preventDefault();
 
     try {
+      // Validácia
+      if (!formData.preferredFrom || !formData.preferredTo) {
+        toast({
+          title: 'Chyba',
+          description: 'Vyplňte preferované termíny',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (pricingType === 'unit' && (!formData.quantity || parseInt(formData.quantity) < 1)) {
+        toast({
+          title: 'Chyba',
+          description: 'Vyplňte počet ks',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (pricingType === 'cpt' && normalizedImpressions === 0) {
+        toast({
+          title: 'Chyba',
+          description: 'Vyplňte počet zobrazení',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Kontrola minimálnej hodnoty objednávky
+      if (offer.minOrderValue && totalPrice < offer.minOrderValue) {
+        toast({
+          title: 'Chyba',
+          description: `Minimální hodnota objednávky je ${formatPrice(offer.minOrderValue)}`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       // Získaj agencyUserId z kontextu (uložené po prihlásení)
-      const agencyUserId = userId;
-      if (!agencyUserId) {
+      if (!userId) {
         toast({
           title: 'Chyba',
           description: 'Musíte být přihlášeni pro vytvoření objednávky',
@@ -99,13 +142,13 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
 
       const order = await createOrder(
         offer.id,
-        agencyUserId,
+        userId,
         {
           preferredFrom: formData.preferredFrom,
           preferredTo: formData.preferredTo,
-          quantityUnits: pricingType === 'unit' ? parseInt(formData.quantity) : undefined,
-          impressions: pricingType === 'cpt' ? normalizedImpressions : undefined,
-          note: formData.note,
+          quantityUnits: pricingType === 'unit' && parseInt(formData.quantity) > 0 ? parseInt(formData.quantity) : undefined,
+          impressions: pricingType === 'cpt' && normalizedImpressions > 0 ? normalizedImpressions : undefined,
+          note: formData.note || '',
         }
       );
 
@@ -130,9 +173,6 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
         impressions: '',
         finalClient: '',
         note: '',
-        contactName: '',
-        contactEmail: '',
-        contactPhone: '',
       });
     }, 200);
   };
@@ -282,6 +322,20 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
               </>
             )}
 
+            {offer.discountPercent > 0 && (() => {
+              const basePrice = pricingType === 'unit' && offer.pricePerUnit 
+                ? offer.pricePerUnit * (parseInt(formData.quantity) || 0)
+                : (normalizedImpressions / 1000) * (offer.cpt || 0);
+              const discountAmount = basePrice * (offer.discountPercent / 100);
+              return (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Sleva ({offer.discountPercent}%):</span>
+                  <span className="text-destructive font-medium">
+                    -{formatPrice(discountAmount)}
+                  </span>
+                </div>
+              );
+            })()}
             <div className="flex justify-between items-center pt-3 border-t">
               <span className="font-medium">Cena celkem:</span>
               <span className="font-display text-xl font-bold text-primary">
@@ -327,44 +381,6 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
             />
-          </div>
-
-          {/* Contact info */}
-          <div className="border-t pt-4">
-            <p className="text-sm font-medium mb-3">Kontaktní údaje</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="contactName">Kontaktní osoba *</Label>
-                <Input
-                  id="contactName"
-                  placeholder="Jméno a příjmení"
-                  value={formData.contactName}
-                  onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contactEmail">E-mail *</Label>
-                <Input
-                  id="contactEmail"
-                  type="email"
-                  placeholder="vas@email.cz"
-                  value={formData.contactEmail}
-                  onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contactPhone">Telefon</Label>
-                <Input
-                  id="contactPhone"
-                  type="tel"
-                  placeholder="+420 xxx xxx xxx"
-                  value={formData.contactPhone}
-                  onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                />
-              </div>
-            </div>
           </div>
 
           {/* Buttons */}

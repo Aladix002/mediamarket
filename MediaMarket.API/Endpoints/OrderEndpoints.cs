@@ -85,19 +85,82 @@ public static class OrderEndpoints
         [FromBody] CreateOrderRequest request,
         [FromServices] IOrderService orderService,
         [FromServices] IOfferService offerService,
+        [FromServices] IUserService userService,
         [FromServices] CreateOrderRequestValidator validator,
         [FromQuery] Guid agencyUserId) // TODO: Ziskat z JWT tokenu
     {
+        // Validacia request body
+        if (request == null)
+        {
+            return Results.BadRequest(new { message = "Request body je prazdny" });
+        }
+
+        // Kontrola základných hodnôt pred validáciou
+        if (request.OfferId == Guid.Empty)
+        {
+            return Results.BadRequest(new { message = "OfferId je povinný a nesmie byť prázdny" });
+        }
+
+        if (request.PreferredFrom == default(DateTime))
+        {
+            return Results.BadRequest(new { message = "PreferredFrom je povinný dátum" });
+        }
+
+        if (request.PreferredTo == default(DateTime))
+        {
+            return Results.BadRequest(new { message = "PreferredTo je povinný dátum" });
+        }
+
+        if (request.PreferredTo <= request.PreferredFrom)
+        {
+            return Results.BadRequest(new { message = "PreferredTo musí byť neskôr ako PreferredFrom" });
+        }
+
         var validationResult = await validator.ValidateAsync(request);
         if (!validationResult.IsValid)
         {
-            return Results.BadRequest(validationResult.Errors);
+            var errorMessages = validationResult.Errors.Select(e => new { 
+                property = e.PropertyName, 
+                message = e.ErrorMessage,
+                attemptedValue = e.AttemptedValue?.ToString()
+            }).ToList();
+            
+            return Results.BadRequest(new { 
+                message = "Validácia zlyhala", 
+                errors = errorMessages,
+                requestData = new {
+                    offerId = request.OfferId.ToString(),
+                    preferredFrom = request.PreferredFrom.ToString("yyyy-MM-dd HH:mm:ss"),
+                    preferredTo = request.PreferredTo.ToString("yyyy-MM-dd HH:mm:ss"),
+                    quantityUnits = request.QuantityUnits,
+                    impressions = request.Impressions,
+                    noteLength = request.Note?.Length ?? 0
+                }
+            });
+        }
+
+        // Validuj existenciu používateľa
+        var agencyUser = await userService.GetByIdAsync(agencyUserId);
+        if (agencyUser == null)
+        {
+            return Results.BadRequest(new { message = $"Používateľ s ID {agencyUserId} neexistuje" });
         }
 
         var offer = await offerService.GetByIdAsync(request.OfferId);
         if (offer == null)
         {
             return Results.BadRequest(new { message = "Ponuka neexistuje" });
+        }
+
+        // Validacia: musi byt vyplneny QuantityUnits alebo Impressions podla pricing modelu
+        if (offer.PricingModel == PricingModel.UnitPrice && !request.QuantityUnits.HasValue)
+        {
+            return Results.BadRequest(new { message = "Pre UnitPrice model musite vyplnit pocet jednotiek" });
+        }
+
+        if (offer.PricingModel == PricingModel.Cpt && (!request.Impressions.HasValue || request.Impressions.Value <= 0))
+        {
+            return Results.BadRequest(new { message = "Pre CPT model musite vyplnit pocet impresii (vacsi ako 0)" });
         }
 
         // Vypocitaj TotalPrice
@@ -108,7 +171,8 @@ public static class OrderEndpoints
         }
         else if (offer.PricingModel == PricingModel.Cpt && request.Impressions.HasValue && offer.Cpt.HasValue)
         {
-            totalPrice = offer.Cpt.Value * request.Impressions.Value;
+            // CPT je cena za tisíc zobrazení, takže delíme 1000
+            totalPrice = (offer.Cpt.Value * request.Impressions.Value) / 1000;
         }
 
         // Aplikuj zlavu
@@ -123,14 +187,18 @@ public static class OrderEndpoints
             return Results.BadRequest(new { message = $"Minimalna hodnota objednavky je {offer.MinOrderValue.Value} EUR" });
         }
 
+        // Konvertuj dátumy na UTC (PostgreSQL vyžaduje UTC)
+        var preferredFromUtc = ConvertToUtc(request.PreferredFrom);
+        var preferredToUtc = ConvertToUtc(request.PreferredTo);
+
         var order = new Order
         {
             Id = Guid.NewGuid(),
             OfferId = request.OfferId,
             AgencyUserId = agencyUserId,
             MediaUserId = offer.MediaUserId,
-            PreferredFrom = request.PreferredFrom,
-            PreferredTo = request.PreferredTo,
+            PreferredFrom = preferredFromUtc,
+            PreferredTo = preferredToUtc,
             PricingModelSnapshot = offer.PricingModel,
             UnitPriceSnapshot = offer.UnitPrice,
             CptSnapshot = offer.Cpt,
@@ -169,6 +237,25 @@ public static class OrderEndpoints
             return Results.NotFound();
 
         return Results.NoContent();
+    }
+
+    private static DateTime ConvertToUtc(DateTime dateTime)
+    {
+        // Ak je dátum už UTC, vráť ho
+        if (dateTime.Kind == DateTimeKind.Utc)
+            return dateTime;
+        
+        // Ak je dátum Unspecified (prichádza z frontendu bez timezone), 
+        // predpokladaj že je to dátum bez času (z date inputu) a nastav ho ako UTC
+        if (dateTime.Kind == DateTimeKind.Unspecified)
+        {
+            // Pre dátumy z date inputu (bez času) jednoducho označíme ako UTC
+            // Time je už nastavený (zvyčajne 00:00:00)
+            return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+        }
+        
+        // Ak je dátum Local, konvertuj na UTC
+        return dateTime.ToUniversalTime();
     }
 
     private static OrderResponse MapToResponse(Order order)

@@ -11,9 +11,11 @@ import { Link } from 'react-router-dom';
 import { apiClient } from '@/api/client';
 import { MediaTypeMap, OfferTagMap, OfferStatusMap, PricingModelMap } from '@/api/mappers';
 import { toast } from '@/hooks/use-toast';
+import { useApp } from '@/contexts/AppContext';
 
 const AddOffer = () => {
   const navigate = useNavigate();
+  const { userId } = useApp();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -23,6 +25,7 @@ const AddOffer = () => {
     pricePerUnit: '',
     cpt: '',
     minOrderValue: '',
+    discountPercent: '0',
     validFrom: '',
     validTo: '',
     description: '',
@@ -49,8 +52,7 @@ const AddOffer = () => {
       setSubmitting(true);
 
       // Získaj mediaUserId z kontextu (uložené po prihlásení)
-      const mediaUserId = userId;
-      if (!mediaUserId) {
+      if (!userId) {
         toast({
           title: 'Chyba',
           description: 'Musíte být přihlášeni pro vytvoření nabídky',
@@ -60,34 +62,92 @@ const AddOffer = () => {
         return;
       }
 
-      // Konvertuj tags na flags enum
-      let tagsValue: 0 | 1 | 2 | 4 = 0;
-      if (tags['akce']) tagsValue = (tagsValue | 1) as 0 | 1 | 2 | 4;
-      if (tags['speciál']) tagsValue = (tagsValue | 2) as 0 | 1 | 2 | 4;
-      if (tags['last-minute']) tagsValue = (tagsValue | 4) as 0 | 1 | 2 | 4;
+      // Validácia povinných polí
+      if (!formData.title.trim()) {
+        toast({
+          title: 'Chyba',
+          description: 'Název nabídky je povinný',
+          variant: 'destructive',
+        });
+        setSubmitting(false);
+        return;
+      }
 
-      // Urči pricing model
-      const pricingModel = formData.pricePerUnit ? PricingModelMap.unit : PricingModelMap.cpt;
+      if (!formData.description.trim()) {
+        toast({
+          title: 'Chyba',
+          description: 'Popis nabídky je povinný',
+          variant: 'destructive',
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      if (!formData.mediaType) {
+        toast({
+          title: 'Chyba',
+          description: 'Typ média je povinný',
+          variant: 'destructive',
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      if (!formData.validFrom || !formData.validTo) {
+        toast({
+          title: 'Chyba',
+          description: 'Platnost nabídky (od-do) je povinná',
+          variant: 'destructive',
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      // Konvertuj tags na flags enum
+      let tagsValue = 0;
+      if (tags['akce']) tagsValue |= 1;
+      if (tags['speciál']) tagsValue |= 2;
+      if (tags['last-minute']) tagsValue |= 4;
+
+      // Urči pricing model - ak je vyplnený pricePerUnit, použij UnitPrice, inak CPT
+      const hasUnitPrice = formData.pricePerUnit && parseFloat(formData.pricePerUnit) > 0;
+      const hasCpt = formData.cpt && parseFloat(formData.cpt) > 0;
+      
+      if (!hasUnitPrice && !hasCpt) {
+        toast({
+          title: 'Chyba',
+          description: 'Musíte vyplnit buď cenu za ks nebo CPT',
+          variant: 'destructive',
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      const pricingModel = hasUnitPrice ? PricingModelMap.unit : PricingModelMap.cpt;
+
+      // Konvertuj dátumy - dátumové polia vracajú string v formáte YYYY-MM-DD
+      const deadlineDate = formData.deadline || null;
+      const lastOrderDate = formData.lastOrderDate || null;
 
       const response = await apiClient.offers.createOffer({
-        mediaUserId,
+        mediaUserId: userId,
         requestBody: {
-          title: formData.title,
+          title: formData.title.trim(),
           mediaType: MediaTypeMap[formData.mediaType as keyof typeof MediaTypeMap] || 0,
-          format: formData.format,
-          description: formData.description,
+          format: formData.format.trim() || null,
+          description: formData.description.trim(),
           pricingModel,
-          unitPrice: formData.pricePerUnit ? parseFloat(formData.pricePerUnit) : null,
-          cpt: formData.cpt ? parseFloat(formData.cpt) : null,
+          unitPrice: hasUnitPrice ? parseFloat(formData.pricePerUnit) : null,
+          cpt: hasCpt ? parseFloat(formData.cpt) : null,
           minOrderValue: formData.minOrderValue ? parseFloat(formData.minOrderValue) : null,
-          discountPercent: 0, // TODO: Pridať do formulára
-          tags: tagsValue,
-          deadlineAssetsAt: formData.deadline || null,
-          lastOrderDay: formData.lastOrderDate || null,
+          discountPercent: parseFloat(formData.discountPercent) || 0,
+          tags: tagsValue as any,
+          deadlineAssetsAt: deadlineDate,
+          lastOrderDay: lastOrderDate,
           validFrom: formData.validFrom,
           validTo: formData.validTo,
-          technicalConditionsText: formData.technicalConditionsText || null,
-          technicalConditionsUrl: formData.technicalConditionsUrl || null,
+          technicalConditionsText: formData.technicalConditionsText.trim() || null,
+          technicalConditionsUrl: formData.technicalConditionsUrl.trim() || null,
         },
       });
 
@@ -226,16 +286,31 @@ const AddOffer = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="minOrderValue">Minimální hodnota objednávky (Kč)</Label>
-              <Input 
-                id="minOrderValue" 
-                type="number" 
-                placeholder="20000" 
-                value={formData.minOrderValue}
-                onChange={(e) => setFormData({ ...formData, minOrderValue: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">Nepovinné</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="minOrderValue">Minimální hodnota objednávky (Kč)</Label>
+                <Input 
+                  id="minOrderValue" 
+                  type="number" 
+                  placeholder="20000" 
+                  value={formData.minOrderValue}
+                  onChange={(e) => setFormData({ ...formData, minOrderValue: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Nepovinné</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discountPercent">Sleva (%)</Label>
+                <Input 
+                  id="discountPercent" 
+                  type="number" 
+                  min="0"
+                  max="100"
+                  placeholder="0" 
+                  value={formData.discountPercent}
+                  onChange={(e) => setFormData({ ...formData, discountPercent: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">0-100%</p>
+              </div>
             </div>
           </div>
 
@@ -304,10 +379,11 @@ const AddOffer = () => {
                 <Label htmlFor="deadline">Deadline na dodání podkladů</Label>
                 <Input 
                   id="deadline" 
-                  placeholder="3 pracovní dny před spuštěním" 
+                  type="date"
                   value={formData.deadline}
                   onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">Nepovinné</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastOrderDate">Poslední možný den objednání</Label>
@@ -317,6 +393,7 @@ const AddOffer = () => {
                   value={formData.lastOrderDate}
                   onChange={(e) => setFormData({ ...formData, lastOrderDate: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">Nepovinné</p>
               </div>
             </div>
           </div>

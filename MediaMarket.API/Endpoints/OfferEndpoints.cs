@@ -92,6 +92,7 @@ public static class OfferEndpoints
     private static async Task<IResult> CreateOfferAsync(
         [FromBody] CreateOfferRequest request,
         [FromServices] IOfferService offerService,
+        [FromServices] IUserService userService,
         [FromServices] CreateOfferRequestValidator validator,
         [FromQuery] Guid mediaUserId) // TODO: Ziskat z JWT tokenu
     {
@@ -100,6 +101,19 @@ public static class OfferEndpoints
         {
             return Results.BadRequest(validationResult.Errors);
         }
+
+        // Validuj existenciu používateľa
+        var user = await userService.GetByIdAsync(mediaUserId);
+        if (user == null)
+        {
+            return Results.BadRequest(new { message = $"Používateľ s ID {mediaUserId} neexistuje" });
+        }
+
+        // Konvertuj dátumy na UTC (PostgreSQL vyžaduje UTC)
+        var validFromUtc = ConvertToUtc(request.ValidFrom);
+        var validToUtc = ConvertToUtc(request.ValidTo);
+        var deadlineUtc = request.DeadlineAssetsAt.HasValue ? ConvertToUtc(request.DeadlineAssetsAt.Value) : (DateTime?)null;
+        var lastOrderDayUtc = request.LastOrderDay.HasValue ? ConvertToUtc(request.LastOrderDay.Value) : (DateTime?)null;
 
         var offer = new Offer
         {
@@ -115,10 +129,10 @@ public static class OfferEndpoints
             MinOrderValue = request.MinOrderValue,
             DiscountPercent = request.DiscountPercent,
             Tags = request.Tags,
-            DeadlineAssetsAt = request.DeadlineAssetsAt,
-            LastOrderDay = request.LastOrderDay,
-            ValidFrom = request.ValidFrom,
-            ValidTo = request.ValidTo,
+            DeadlineAssetsAt = deadlineUtc,
+            LastOrderDay = lastOrderDayUtc,
+            ValidFrom = validFromUtc,
+            ValidTo = validToUtc,
             TechnicalConditionsText = request.TechnicalConditionsText,
             TechnicalConditionsUrl = request.TechnicalConditionsUrl,
             Status = OfferStatus.Draft,
@@ -146,6 +160,12 @@ public static class OfferEndpoints
         if (offer == null)
             return Results.NotFound();
 
+        // Konvertuj dátumy na UTC (PostgreSQL vyžaduje UTC)
+        var validFromUtc = ConvertToUtc(request.ValidFrom);
+        var validToUtc = ConvertToUtc(request.ValidTo);
+        var deadlineUtc = request.DeadlineAssetsAt.HasValue ? ConvertToUtc(request.DeadlineAssetsAt.Value) : (DateTime?)null;
+        var lastOrderDayUtc = request.LastOrderDay.HasValue ? ConvertToUtc(request.LastOrderDay.Value) : (DateTime?)null;
+
         offer.Title = request.Title;
         offer.Format = request.Format;
         offer.Description = request.Description;
@@ -156,10 +176,10 @@ public static class OfferEndpoints
         offer.MinOrderValue = request.MinOrderValue;
         offer.DiscountPercent = request.DiscountPercent;
         offer.Tags = request.Tags;
-        offer.DeadlineAssetsAt = request.DeadlineAssetsAt;
-        offer.LastOrderDay = request.LastOrderDay;
-        offer.ValidFrom = request.ValidFrom;
-        offer.ValidTo = request.ValidTo;
+        offer.DeadlineAssetsAt = deadlineUtc;
+        offer.LastOrderDay = lastOrderDayUtc;
+        offer.ValidFrom = validFromUtc;
+        offer.ValidTo = validToUtc;
         offer.TechnicalConditionsText = request.TechnicalConditionsText;
         offer.TechnicalConditionsUrl = request.TechnicalConditionsUrl;
         offer.UpdatedAt = DateTime.UtcNow;
@@ -207,6 +227,25 @@ public static class OfferEndpoints
             return Results.NotFound();
 
         return Results.NoContent();
+    }
+
+    private static DateTime ConvertToUtc(DateTime dateTime)
+    {
+        // Ak je dátum už UTC, vráť ho
+        if (dateTime.Kind == DateTimeKind.Utc)
+            return dateTime;
+        
+        // Ak je dátum Unspecified (prichádza z frontendu bez timezone), 
+        // predpokladaj že je to dátum bez času (z date inputu) a nastav ho ako UTC
+        if (dateTime.Kind == DateTimeKind.Unspecified)
+        {
+            // Pre dátumy z date inputu (bez času) jednoducho označíme ako UTC
+            // Time je už nastavený (zvyčajne 00:00:00)
+            return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+        }
+        
+        // Ak je dátum Local, konvertuj na UTC
+        return dateTime.ToUniversalTime();
     }
 
     private static OfferResponse MapToResponse(Offer offer)

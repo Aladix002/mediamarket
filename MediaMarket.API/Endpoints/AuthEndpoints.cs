@@ -281,7 +281,6 @@ public static class AuthEndpoints
 
     private static async Task<IResult> LoginAsync(
         [FromBody] LoginRequest request,
-        [FromServices] IAuthService authService,
         [FromServices] IUserService userService,
         [FromServices] LoginRequestValidator validator)
     {
@@ -298,14 +297,6 @@ public static class AuthEndpoints
 
         try
         {
-            // Prihlasenie cez Supabase Auth
-            var (accessToken, refreshToken, supabaseUser) = await authService.SignInAsync(request.Email, request.Password);
-            
-            if (accessToken == null || supabaseUser == null)
-            {
-                return Results.Unauthorized();
-            }
-
             // Ziskaj pouzivatela z nasej databazy
             var user = await userService.GetByEmailAsync(request.Email);
             if (user == null)
@@ -313,13 +304,29 @@ public static class AuthEndpoints
                 return Results.Unauthorized();
             }
 
+            // Over heslo cez BCrypt
+            if (string.IsNullOrEmpty(user.PasswordHash))
+            {
+                return Results.Unauthorized();
+            }
+
+            var isValidPassword = await userService.VerifyPasswordAsync(request.Email, request.Password);
+            if (!isValidPassword)
+            {
+                return Results.Unauthorized();
+            }
+
+            // Vytvor jednoduchy token (pre testovanie - v produkcii by sa mal pouzivat JWT)
+            // Pre jednoduchost pouzijeme base64 encoded string s user ID a emailom
+            var tokenData = $"{user.Id}:{user.Email}:{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss}";
+            var simpleToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(tokenData));
 
             return Results.Ok(new LoginResponse
             {
                 Success = true,
                 Message = "Prihlasenie uspesne",
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
+                AccessToken = simpleToken,
+                RefreshToken = null,
                 User = new UserInfo
                 {
                     Id = user.Id,
@@ -336,23 +343,14 @@ public static class AuthEndpoints
         }
     }
 
-    private static async Task<IResult> LogoutAsync(
-        [FromServices] IAuthService authService)
+    private static async Task<IResult> LogoutAsync()
     {
-        try
-        {
-            await authService.SignOutAsync();
-            return Results.Ok(new { Success = true, Message = "Odhlasenie uspesne" });
-        }
-        catch
-        {
-            return Results.Ok(new { Success = true, Message = "Odhlasenie uspesne" });
-        }
+        // Jednoduchy logout - v produkcii by sa mal token invalidovat
+        return Results.Ok(new { Success = true, Message = "Odhlasenie uspesne" });
     }
 
     private static async Task<IResult> GetCurrentUserAsync(
         [FromHeader(Name = "Authorization")] string? authorization,
-        [FromServices] IAuthService authService,
         [FromServices] IUserService userService)
     {
         if (string.IsNullOrEmpty(authorization) || !authorization.StartsWith("Bearer "))
@@ -364,27 +362,17 @@ public static class AuthEndpoints
         
         try
         {
-            // Ziskaj pouzivatela z Supabase tokenu
-            var supabaseUser = await authService.GetUserFromTokenAsync(token);
-            if (supabaseUser == null)
+            // Dekoduj jednoduchy token
+            var tokenBytes = Convert.FromBase64String(token);
+            var tokenString = System.Text.Encoding.UTF8.GetString(tokenBytes);
+            var tokenParts = tokenString.Split(':');
+            
+            if (tokenParts.Length >= 2 && Guid.TryParse(tokenParts[0], out var userId))
             {
-                return Results.Unauthorized();
-            }
-
-            // Ziskaj email z Supabase user objektu
-            var email = GetEmailFromSupabaseUser(supabaseUser);
-            if (string.IsNullOrEmpty(email))
-            {
-                return Results.Unauthorized();
-            }
-
-            // Ziskaj pouzivatela z nasej databazy
-            var user = await userService.GetByEmailAsync(email);
-            if (user == null)
-            {
-                return Results.Unauthorized();
-            }
-
+                // Ziskaj pouzivatela podla ID
+                var user = await userService.GetByIdAsync(userId);
+                if (user != null)
+                {
                     var response = new UserResponse
                     {
                         Id = user.Id,
@@ -397,8 +385,11 @@ public static class AuthEndpoints
                         ContactName = user.ContactName,
                         Phone = user.Phone
                     };
+                    return Results.Ok(response);
+                }
+            }
 
-            return Results.Ok(response);
+            return Results.Unauthorized();
         }
         catch
         {
