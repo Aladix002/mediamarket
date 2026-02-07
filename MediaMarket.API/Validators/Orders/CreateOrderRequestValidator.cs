@@ -12,7 +12,9 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
             .NotEmpty().WithMessage("ID ponuky je povinne");
 
         RuleFor(x => x.PreferredFrom)
-            .NotEmpty().WithMessage("Datum od je povinny");
+            .NotEmpty().WithMessage("Datum od je povinny")
+            .GreaterThanOrEqualTo(DateTime.UtcNow.Date)
+            .WithMessage("Datum od nemoze byt skor ako dnes");
 
         RuleFor(x => x.PreferredTo)
             .NotEmpty().WithMessage("Datum do je povinny")
@@ -27,7 +29,7 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
             .WithMessage("Pocet impresii musi byt vacsi ako 0");
 
         RuleFor(x => x.Note)
-            .MaximumLength(1000).WithMessage("Poznamka moze mat maximalne 1000 znakov");
+            .MaximumLength(2000).WithMessage("Poznamka moze mat maximalne 2000 znakov");
 
         // Validacia: musi byt vyplneny QuantityUnits alebo Impressions (a musi byt > 0)
         RuleFor(x => x)

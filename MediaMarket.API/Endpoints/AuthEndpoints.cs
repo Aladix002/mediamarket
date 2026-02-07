@@ -1,3 +1,4 @@
+using System;
 using MediaMarket.API.DTOs;
 using MediaMarket.API.DTOs.Users.Responses;
 using MediaMarket.API.Validators;
@@ -7,6 +8,8 @@ using MediaMarket.DAL.Entities;
 using MediaMarket.DAL.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using BCrypt.Net;
 
 namespace MediaMarket.API.Endpoints;
 
@@ -282,7 +285,8 @@ public static class AuthEndpoints
     private static async Task<IResult> LoginAsync(
         [FromBody] LoginRequest request,
         [FromServices] IUserService userService,
-        [FromServices] LoginRequestValidator validator)
+        [FromServices] LoginRequestValidator validator,
+        [FromServices] ILoggerFactory loggerFactory)
     {
         // Validacia
         var validationResult = await validator.ValidateAsync(request);
@@ -301,19 +305,43 @@ public static class AuthEndpoints
             var user = await userService.GetByEmailAsync(request.Email);
             if (user == null)
             {
-                return Results.Unauthorized();
+                return Results.Json(new LoginResponse
+                {
+                    Success = false,
+                    Message = "Používateľ s týmto emailom neexistuje"
+                }, statusCode: 401);
             }
 
             // Over heslo cez BCrypt
             if (string.IsNullOrEmpty(user.PasswordHash))
             {
-                return Results.Unauthorized();
+                return Results.Json(new LoginResponse
+                {
+                    Success = false,
+                    Message = "Používateľ nemá nastavené heslo"
+                }, statusCode: 401);
             }
 
+            // Debug: Skontroluj hash
+            var logger = loggerFactory.CreateLogger("AuthEndpoints");
+            logger.LogInformation("Verifying password for user: {Email}, Hash exists: {HasHash}, Hash length: {HashLength}", 
+                request.Email, !string.IsNullOrEmpty(user.PasswordHash), user.PasswordHash?.Length ?? 0);
+            
             var isValidPassword = await userService.VerifyPasswordAsync(request.Email, request.Password);
+            logger.LogInformation("Password verification result: {IsValid}", isValidPassword);
+            
             if (!isValidPassword)
             {
-                return Results.Unauthorized();
+                // Debug: Skús overiť heslo priamo
+                var directVerify = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
+                logger.LogWarning("Direct BCrypt verify result: {DirectVerify}, Hash: {HashPrefix}", 
+                    directVerify, user.PasswordHash?.Substring(0, Math.Min(20, user.PasswordHash?.Length ?? 0)));
+                
+                return Results.Json(new LoginResponse
+                {
+                    Success = false,
+                    Message = "Nesprávne heslo"
+                }, statusCode: 401);
             }
 
             // Vytvor jednoduchy token (pre testovanie - v produkcii by sa mal pouzivat JWT)
@@ -337,9 +365,14 @@ public static class AuthEndpoints
                 }
             });
         }
-        catch
+        catch (Exception ex)
         {
-            return Results.Unauthorized();
+            // Log exception pre debugging (v produkcii by sa mal použiť logger)
+            return Results.Json(new LoginResponse
+            {
+                Success = false,
+                Message = $"Chyba pri prihlásení: {ex.Message}"
+            }, statusCode: 401);
         }
     }
 

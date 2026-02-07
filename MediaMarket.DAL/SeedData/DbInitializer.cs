@@ -16,18 +16,36 @@ public static class DbInitializer
         await context.Database.MigrateAsync();
 
         // Skontroluj, ci uz existuju seed pouzivatelia
-        var seedUsersExist = await context.Users
-            .AnyAsync(u => u.Email == "admin@mediamarket.sk" || 
-                          u.Email == "media@mediamarket.sk" || 
-                          u.Email == "agency@mediamarket.sk");
+        var existingUsers = await context.Users
+            .Where(u => u.Email == "admin@mediamarket.sk" || 
+                       u.Email == "media@mediamarket.sk" || 
+                       u.Email == "agency@mediamarket.sk")
+            .ToListAsync();
 
-        if (seedUsersExist)
+        // Ak existujú, aktualizuj ich heslo (pre prípad, že hash nie je správny)
+        if (existingUsers.Any())
         {
-            return; // Seed pouzivatelia uz existuju
+            var correctPasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!", BCrypt.Net.BCrypt.GenerateSalt());
+            foreach (var user in existingUsers)
+            {
+                // Aktualizuj heslo len ak hash nevyzerá správne (nie je BCrypt hash)
+                if (string.IsNullOrEmpty(user.PasswordHash) || !user.PasswordHash.StartsWith("$2"))
+                {
+                    user.PasswordHash = correctPasswordHash;
+                }
+            }
+            await context.SaveChangesAsync();
+            
+            // Ak už existujú všetci tri, nepridávaj nových
+            if (existingUsers.Count >= 3)
+            {
+                return;
+            }
         }
 
         var now = DateTime.UtcNow;
-        var defaultPassword = BCrypt.Net.BCrypt.HashPassword("Password123!"); // Vsetci maju rovnake heslo pre testovanie
+        // Použijeme rovnaký spôsob hashovania ako v PasswordHasher
+        var defaultPassword = BCrypt.Net.BCrypt.HashPassword("Password123!", BCrypt.Net.BCrypt.GenerateSalt()); // Vsetci maju rovnake heslo pre testovanie
 
         // 1. Admin pouzivatel
         var admin = new User

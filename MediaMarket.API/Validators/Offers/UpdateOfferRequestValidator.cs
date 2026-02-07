@@ -16,11 +16,20 @@ public class UpdateOfferRequestValidator : AbstractValidator<UpdateOfferRequest>
             .NotEmpty().WithMessage("Popis je povinny")
             .MaximumLength(2000).WithMessage("Popis moze mat maximalne 2000 znakov");
 
+        RuleFor(x => x.Format)
+            .MaximumLength(255)
+            .When(x => !string.IsNullOrEmpty(x.Format))
+            .WithMessage("Format moze mat maximalne 255 znakov");
+
         RuleFor(x => x.MediaType)
             .IsInEnum().WithMessage("Neplatny typ media");
 
         RuleFor(x => x.PricingModel)
             .IsInEnum().WithMessage("Neplatny cenovy model");
+
+        RuleFor(x => x.ValidFrom)
+            .GreaterThanOrEqualTo(DateTime.UtcNow.Date)
+            .WithMessage("Datum platnosti od nemoze byt skor ako dnes");
 
         RuleFor(x => x.ValidTo)
             .GreaterThan(x => x.ValidFrom).WithMessage("Datum do musi byt neskor ako datum od");
@@ -35,6 +44,37 @@ public class UpdateOfferRequestValidator : AbstractValidator<UpdateOfferRequest>
         RuleFor(x => x.MinOrderValue)
             .GreaterThan(0).When(x => x.MinOrderValue.HasValue)
             .WithMessage("Minimalna hodnota objednavky musi byt vacsia ako 0");
+
+        RuleFor(x => x.TechnicalConditionsText)
+            .MaximumLength(2000)
+            .When(x => !string.IsNullOrEmpty(x.TechnicalConditionsText))
+            .WithMessage("Technicke podmienky mozu mat maximalne 2000 znakov");
+
+        RuleFor(x => x.TechnicalConditionsUrl)
+            .Must(url => string.IsNullOrEmpty(url) || Uri.TryCreate(url, UriKind.Absolute, out _))
+            .When(x => !string.IsNullOrEmpty(x.TechnicalConditionsUrl))
+            .WithMessage("URL technickych podmienok musi byt platna URL adresa")
+            .MaximumLength(500)
+            .When(x => !string.IsNullOrEmpty(x.TechnicalConditionsUrl))
+            .WithMessage("URL technickych podmienok moze mat maximalne 500 znakov");
+
+        // Validacia DeadlineAssetsAt >= ValidFrom
+        RuleFor(x => x.DeadlineAssetsAt)
+            .GreaterThanOrEqualTo(x => x.ValidFrom.Date)
+            .When(x => x.DeadlineAssetsAt.HasValue)
+            .WithMessage("Deadline na dodanie podkladov nemoze byt skor ako datum platnosti nabidky od");
+
+        // Validacia LastOrderDay >= ValidFrom
+        RuleFor(x => x.LastOrderDay)
+            .GreaterThanOrEqualTo(x => x.ValidFrom.Date)
+            .When(x => x.LastOrderDay.HasValue)
+            .WithMessage("Posledny mozny den objednavky nemoze byt skor ako datum platnosti nabidky od");
+
+        // Validacia LastOrderDay <= DeadlineAssetsAt (ak su oba vyplnene)
+        RuleFor(x => x)
+            .Must(x => !x.LastOrderDay.HasValue || !x.DeadlineAssetsAt.HasValue || 
+                x.LastOrderDay.Value <= x.DeadlineAssetsAt.Value)
+            .WithMessage("Posledny den objednavky nesmie byt neskor ako deadline pre zasielanie materialov");
     }
 
     private static bool HaveValidPricing(UpdateOfferRequest request)

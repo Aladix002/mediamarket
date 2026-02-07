@@ -21,6 +21,11 @@ public class OrderValidator : AbstractValidator<Order>
         RuleFor(o => o.MediaUserId)
             .NotEmpty().WithMessage("ID media je povinne");
 
+        // Validacia PreferredFrom >= dnes
+        RuleFor(o => o.PreferredFrom)
+            .GreaterThanOrEqualTo(DateTime.UtcNow.Date)
+            .WithMessage("Preferovany termin od nemoze byt skor ako dnes");
+
         // Validacia PreferredTo > PreferredFrom
         RuleFor(o => o)
             .Must(o => o.PreferredTo > o.PreferredFrom)

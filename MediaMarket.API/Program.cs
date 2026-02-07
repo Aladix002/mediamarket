@@ -16,10 +16,43 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:8080")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
+        if (builder.Environment.IsDevelopment())
+        {
+            // V developmente povol všetky localhost porty a Docker IP adresy
+            // Použij SetIsOriginAllowed pre flexibilnejšie riešenie
+            policy.SetIsOriginAllowed(origin =>
+            {
+                if (string.IsNullOrEmpty(origin))
+                    return false;
+
+                // Povol localhost s akýmkoľvek portom
+                if (origin.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase) ||
+                    origin.StartsWith("http://127.0.0.1:", StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                // Povol Docker IP adresy (172.x.x.x) s bežnými dev portmi
+                if (origin.StartsWith("http://172.", StringComparison.OrdinalIgnoreCase))
+                {
+                    var uri = new Uri(origin);
+                    var port = uri.Port;
+                    // Povol bežné dev porty: 3000, 5173, 5174, 8080
+                    return port == 3000 || port == 5173 || port == 5174 || port == 8080;
+                }
+
+                return false;
+            })
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+        }
+        else
+        {
+            // V produkcii len špecifické domény
+            policy.WithOrigins("http://localhost:5173", "http://localhost:8080")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
     });
 });
 

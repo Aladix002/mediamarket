@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { Offer } from '@/data/mockData';
@@ -43,28 +47,122 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
   // Active pricing type (Online = always CPT, otherwise user-selected if both available)
   const pricingType = isOnline ? 'cpt' : (hasBothPricing ? selectedPricingType : defaultPricingType);
 
-  const [formData, setFormData] = useState({
-    preferredFrom: '',
-    preferredTo: '',
-    quantity: '1',
-    impressions: '',
-    finalClient: '',
-    note: '',
+  // Zod schema - dynamicky podľa pricing type a offer
+  const createOrderSchema = (pricingType: 'unit' | 'cpt', offer: Offer) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const offerValidFrom = offer.validFrom ? new Date(offer.validFrom) : null;
+    const offerValidTo = offer.validTo ? new Date(offer.validTo) : null;
+    const lastOrderDay = offer.lastOrderDate ? new Date(offer.lastOrderDate) : null;
+
+    return z.object({
+      preferredFrom: z.string().min(1, 'Vyplňte preferovaný termín od')
+        .refine((date) => {
+          const selectedDate = new Date(date);
+          return selectedDate >= today;
+        }, 'Preferovaný termín od nemůže být dříve než dnes')
+        .refine((date) => {
+          if (offerValidFrom) {
+            const selectedDate = new Date(date);
+            return selectedDate >= offerValidFrom;
+          }
+          return true;
+        }, offerValidFrom 
+          ? `Preferovaný termín od musí být v rámci platnosti ponuky (od ${offerValidFrom.toLocaleDateString('cs-CZ')})`
+          : 'Preferovaný termín od musí být v rámci platnosti ponuky')
+        .refine((date) => {
+          if (lastOrderDay) {
+            const selectedDate = new Date(date);
+            return selectedDate >= lastOrderDay;
+          }
+          return true;
+        }, lastOrderDay
+          ? `Preferovaný termín od nemůže být dříve než poslední možný den objednávky (${lastOrderDay.toLocaleDateString('cs-CZ')})`
+          : 'Preferovaný termín od nemůže být dříve než poslední možný den objednávky'),
+      preferredTo: z.string().min(1, 'Vyplňte preferovaný termín do')
+        .refine((date) => {
+          if (offerValidTo) {
+            const selectedDate = new Date(date);
+            return selectedDate <= offerValidTo;
+          }
+          return true;
+        }, offerValidTo
+          ? `Preferovaný termín do musí být v rámci platnosti ponuky (do ${offerValidTo.toLocaleDateString('cs-CZ')})`
+          : 'Preferovaný termín do musí být v rámci platnosti ponuky'),
+      quantity: z.string().optional()
+        .refine((val) => {
+          if (pricingType === 'unit') {
+            const num = parseInt(val || '0');
+            return num >= 1 && num <= 100;
+          }
+          return true;
+        }, 'Počet ks musí být mezi 1 a 100'),
+      impressions: z.string().optional()
+        .refine((val) => {
+          if (pricingType === 'cpt') {
+            const cleaned = (val || '').replace(/\s/g, '');
+            const num = parseInt(cleaned);
+            return !isNaN(num) && num > 0;
+          }
+          return true;
+        }, 'Vyplňte počet zobrazení (větší než 0)'),
+      finalClient: z.string().optional(),
+      note: z.string().max(2000, 'Poznámka může mít maximálně 2000 znaků').optional(),
+    }).refine((data) => {
+      // Validácia PreferredTo > PreferredFrom
+      const fromDate = new Date(data.preferredFrom);
+      const toDate = new Date(data.preferredTo);
+      return toDate > fromDate;
+    }, {
+      message: 'Preferovaný termín do musí být později než termín od',
+      path: ['preferredTo'],
+    }).refine((data) => {
+      if (pricingType === 'unit') {
+        return data.quantity && parseInt(data.quantity) >= 1 && parseInt(data.quantity) <= 100;
+      }
+      if (pricingType === 'cpt') {
+        const cleaned = (data.impressions || '').replace(/\s/g, '');
+        const num = parseInt(cleaned);
+        return !isNaN(num) && num > 0;
+      }
+      return true;
+    }, {
+      message: 'Musíte vyplnit buď počet ks (1-100) nebo počet zobrazení (větší než 0)',
+      path: ['quantity'],
+    });
+  };
+
+  const orderSchema = createOrderSchema(pricingType, offer);
+  type OrderFormData = z.infer<typeof orderSchema>;
+
+  const form = useForm<OrderFormData>({
+    resolver: zodResolver(orderSchema),
+    defaultValues: {
+      preferredFrom: '',
+      preferredTo: '',
+      quantity: '1',
+      impressions: '',
+      finalClient: '',
+      note: '',
+    },
   });
 
+  // Watch form values
+  const watchedValues = form.watch();
+  
   // Normalize impressions input (remove spaces, convert to number)
   const normalizedImpressions = useMemo(() => {
-    const cleaned = formData.impressions.replace(/\s/g, '');
+    const cleaned = (watchedValues.impressions || '').replace(/\s/g, '');
     const num = parseInt(cleaned);
     return isNaN(num) || num <= 0 ? 0 : num;
-  }, [formData.impressions]);
+  }, [watchedValues.impressions]);
 
   // Calculate total price (with discount)
   const totalPrice = useMemo(() => {
     let basePrice = 0;
     
     if (pricingType === 'unit' && offer.pricePerUnit) {
-      const qty = parseInt(formData.quantity) || 0;
+      const qty = parseInt(watchedValues.quantity || '0') || 0;
       basePrice = offer.pricePerUnit * qty;
     } else if (pricingType === 'cpt' && offer.cpt) {
       basePrice = (normalizedImpressions / 1000) * offer.cpt;
@@ -76,7 +174,7 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     }
     
     return basePrice;
-  }, [pricingType, offer, formData.quantity, normalizedImpressions]);
+  }, [pricingType, offer, watchedValues.quantity, normalizedImpressions]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -87,39 +185,9 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     }).format(price);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const onSubmit = async (data: OrderFormData) => {
     try {
-      // Validácia
-      if (!formData.preferredFrom || !formData.preferredTo) {
-        toast({
-          title: 'Chyba',
-          description: 'Vyplňte preferované termíny',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (pricingType === 'unit' && (!formData.quantity || parseInt(formData.quantity) < 1)) {
-        toast({
-          title: 'Chyba',
-          description: 'Vyplňte počet ks',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (pricingType === 'cpt' && normalizedImpressions === 0) {
-        toast({
-          title: 'Chyba',
-          description: 'Vyplňte počet zobrazení',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Kontrola minimálnej hodnoty objednávky
+      // Kontrola minimální hodnoty objednávky
       if (offer.minOrderValue && totalPrice < offer.minOrderValue) {
         toast({
           title: 'Chyba',
@@ -144,11 +212,11 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
         offer.id,
         userId,
         {
-          preferredFrom: formData.preferredFrom,
-          preferredTo: formData.preferredTo,
-          quantityUnits: pricingType === 'unit' && parseInt(formData.quantity) > 0 ? parseInt(formData.quantity) : undefined,
+          preferredFrom: data.preferredFrom,
+          preferredTo: data.preferredTo,
+          quantityUnits: pricingType === 'unit' && data.quantity && parseInt(data.quantity) > 0 ? parseInt(data.quantity) : undefined,
           impressions: pricingType === 'cpt' && normalizedImpressions > 0 ? normalizedImpressions : undefined,
-          note: formData.note || '',
+          note: data.note || '',
         }
       );
 
@@ -166,7 +234,7 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
       setSubmitted(false);
       setNewOrderId('');
       setSelectedPricingType(defaultPricingType);
-      setFormData({
+      form.reset({
         preferredFrom: '',
         preferredTo: '',
         quantity: '1',
@@ -216,36 +284,53 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Offer info */}
-          <div className="p-3 bg-secondary rounded-lg">
-            <p className="text-sm font-medium">{offer.title}</p>
-            <p className="text-xs text-muted-foreground">{offer.mediaName}</p>
-          </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+            {/* Offer info */}
+            <div className="p-3 bg-secondary rounded-lg">
+              <p className="text-sm font-medium">{offer.title}</p>
+              <p className="text-xs text-muted-foreground">{offer.mediaName}</p>
+            </div>
 
-          {/* Preferred dates */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="preferredFrom">Preferovaný termín od *</Label>
-              <Input
-                id="preferredFrom"
-                type="date"
-                value={formData.preferredFrom}
-                onChange={(e) => setFormData({ ...formData, preferredFrom: e.target.value })}
-                required
+            {/* Preferred dates */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="preferredFrom"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preferovaný termín od *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        min={new Date().toISOString().split('T')[0]}
+                        max={offer.validTo ? new Date(offer.validTo).toISOString().split('T')[0] : undefined}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="preferredTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preferovaný termín do *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        min={watchedValues.preferredFrom || new Date().toISOString().split('T')[0]}
+                        max={offer.validTo ? new Date(offer.validTo).toISOString().split('T')[0] : undefined}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="preferredTo">Preferovaný termín do *</Label>
-              <Input
-                id="preferredTo"
-                type="date"
-                value={formData.preferredTo}
-                onChange={(e) => setFormData({ ...formData, preferredTo: e.target.value })}
-                required
-              />
-            </div>
-          </div>
 
           {/* Pricing section */}
           <div className="border rounded-lg p-4 space-y-4">
@@ -278,24 +363,30 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
                   <span className="text-sm text-muted-foreground">Cena za ks:</span>
                   <span className="font-medium">{formatPrice(offer.pricePerUnit)}</span>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Počet ks *</Label>
-                  <Select
-                    value={formData.quantity}
-                    onValueChange={(value) => setFormData({ ...formData, quantity: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Vyberte počet" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 100 }, (_, i) => i + 1).map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num} ks
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Počet ks *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Vyberte počet" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Array.from({ length: 100 }, (_, i) => i + 1).map((num) => (
+                            <SelectItem key={num} value={num.toString()}>
+                              {num} ks
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </>
             )}
 
@@ -305,26 +396,34 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
                   <span className="text-sm text-muted-foreground">CPT (cena za tisíc zobrazení):</span>
                   <span className="font-medium">{formatPrice(offer.cpt)}</span>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="impressions">Počet zobrazení *</Label>
-                  <Input
-                    id="impressions"
-                    type="text"
-                    placeholder="např. 100000"
-                    value={formData.impressions}
-                    onChange={(e) => setFormData({ ...formData, impressions: e.target.value })}
-                    required={pricingType === 'cpt'}
-                  />
-                  {formData.impressions && normalizedImpressions === 0 && (
-                    <p className="text-xs text-destructive">Zadejte platné kladné číslo</p>
+                <FormField
+                  control={form.control}
+                  name="impressions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Počet zobrazení *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="např. 100000"
+                          {...field}
+                          onChange={(e) => {
+                            // Povoliť len čísla a medzery (pre formátovanie)
+                            const value = e.target.value.replace(/[^\d\s]/g, '');
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
+                />
               </>
             )}
 
             {offer.discountPercent > 0 && (() => {
               const basePrice = pricingType === 'unit' && offer.pricePerUnit 
-                ? offer.pricePerUnit * (parseInt(formData.quantity) || 0)
+                ? offer.pricePerUnit * (parseInt(watchedValues.quantity || '0') || 0)
                 : (normalizedImpressions / 1000) * (offer.cpt || 0);
               const discountAmount = basePrice * (offer.discountPercent / 100);
               return (
@@ -355,33 +454,49 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
 
           {/* Final client - conditionally required */}
           {offer.requireFinalClient && (
-            <div className="space-y-2">
-              <Label htmlFor="finalClient">Finální klient *</Label>
-              <Input
-                id="finalClient"
-                placeholder="Název finálního klienta"
-                value={formData.finalClient}
-                onChange={(e) => setFormData({ ...formData, finalClient: e.target.value })}
-                required
-              />
-              <p className="text-xs text-muted-foreground flex items-start gap-1">
-                <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
-                Cenové podmínky tohoto formátu se mohou lišit pro různé klienty, z tohoto důvodu médium vyžaduje uvedení finálního klienta.
-              </p>
-            </div>
+            <FormField
+              control={form.control}
+              name="finalClient"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Finální klient *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Název finálního klienta" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground flex items-start gap-1">
+                    <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                    Cenové podmínky tohoto formátu se mohou lišit pro různé klienty, z tohoto důvodu médium vyžaduje uvedení finálního klienta.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           )}
 
           {/* Note */}
-          <div className="space-y-2">
-            <Label htmlFor="note">Poznámka k objednávce</Label>
-            <Textarea
-              id="note"
-              placeholder="Popište vaše požadavky, cíle kampaně, cílovou skupinu..."
-              rows={3}
-              value={formData.note}
-              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="note"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Poznámka k objednávce</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Popište vaše požadavky, cíle kampaně, cílovou skupinu..."
+                    rows={3}
+                    maxLength={2000}
+                    {...field}
+                  />
+                </FormControl>
+                {field.value && field.value.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {field.value.length} / 2000 znaků
+                  </p>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
@@ -416,7 +531,8 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
             </Link>
             .
           </p>
-        </form>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

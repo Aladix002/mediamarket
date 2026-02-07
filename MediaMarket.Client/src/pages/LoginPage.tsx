@@ -70,10 +70,25 @@ const LoginPage = () => {
           }, 2000);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+        console.error('Login error:', error);
+        
+        // Skontroluj, či je to network error
+        let errorMessage = 'Nepodařilo se přihlásit';
+        
+        if (error?.message?.includes('ERR_BLOCKED_BY_CLIENT') || error?.message?.includes('blocked')) {
+          errorMessage = 'Request byl blokován. Zkuste vypnout adblocker nebo jiné rozšíření prohlížeče.';
+        } else if (error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError')) {
+          errorMessage = 'Nelze se připojit k serveru. Zkontrolujte, zda backend běží na http://localhost:5234';
+        } else if (error?.message) {
+          errorMessage = error.message;
+        } else if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+        
         toast({
           title: 'Chyba',
-          description: error instanceof Error ? error.message : 'Nepodařilo se přihlásit',
+          description: errorMessage,
           variant: 'destructive',
         });
     } finally {

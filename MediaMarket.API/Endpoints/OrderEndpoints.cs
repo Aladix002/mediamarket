@@ -152,6 +152,34 @@ public static class OrderEndpoints
             return Results.BadRequest(new { message = "Ponuka neexistuje" });
         }
 
+        // Validacia: ponuka musi byt publikovana
+        if (offer.Status != OfferStatus.Published)
+        {
+            return Results.BadRequest(new { message = "Ponuka nie je publikovana" });
+        }
+
+        // Konvertuj dátumy na UTC pre porovnanie
+        var preferredFromUtc = ConvertToUtc(request.PreferredFrom);
+        var preferredToUtc = ConvertToUtc(request.PreferredTo);
+
+        // Validacia: PreferredFrom musi byt v ramci platnosti ponuky
+        if (preferredFromUtc < offer.ValidFrom.Date)
+        {
+            return Results.BadRequest(new { message = $"Preferovany termin od ({preferredFromUtc:yyyy-MM-dd}) musi byt v ramci platnosti ponuky (od {offer.ValidFrom:yyyy-MM-dd})" });
+        }
+
+        // Validacia: PreferredTo musi byt v ramci platnosti ponuky
+        if (preferredToUtc > offer.ValidTo.Date)
+        {
+            return Results.BadRequest(new { message = $"Preferovany termin do ({preferredToUtc:yyyy-MM-dd}) musi byt v ramci platnosti ponuky (do {offer.ValidTo:yyyy-MM-dd})" });
+        }
+
+        // Validacia: PreferredFrom nemoze byt skor ako LastOrderDay (ak je nastaveny)
+        if (offer.LastOrderDay.HasValue && preferredFromUtc.Date < offer.LastOrderDay.Value.Date)
+        {
+            return Results.BadRequest(new { message = $"Preferovany termin od ({preferredFromUtc:yyyy-MM-dd}) nemoze byt skor ako posledny mozny den objednavky ({offer.LastOrderDay.Value:yyyy-MM-dd})" });
+        }
+
         // Validacia: musi byt vyplneny QuantityUnits alebo Impressions podla pricing modelu
         if (offer.PricingModel == PricingModel.UnitPrice && !request.QuantityUnits.HasValue)
         {
@@ -186,10 +214,6 @@ public static class OrderEndpoints
         {
             return Results.BadRequest(new { message = $"Minimalna hodnota objednavky je {offer.MinOrderValue.Value} EUR" });
         }
-
-        // Konvertuj dátumy na UTC (PostgreSQL vyžaduje UTC)
-        var preferredFromUtc = ConvertToUtc(request.PreferredFrom);
-        var preferredToUtc = ConvertToUtc(request.PreferredTo);
 
         var order = new Order
         {

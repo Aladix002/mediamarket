@@ -78,7 +78,19 @@ public class UserService : IUserService
             return false;
         }
 
-        return PasswordHasher.VerifyPassword(password, user.PasswordHash);
+        if (string.IsNullOrEmpty(user.PasswordHash))
+        {
+            return false;
+        }
+
+        try
+        {
+            return PasswordHasher.VerifyPassword(password, user.PasswordHash);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task<List<User>> GetByRoleAsync(UserRole role)
