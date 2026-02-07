@@ -61,18 +61,33 @@ public static class OfferEndpoints
         [FromServices] IOfferService offerService,
         [FromQuery] OfferStatus? status = null,
         [FromQuery] MediaType? mediaType = null,
-        [FromQuery] Guid? mediaUserId = null)
+        [FromQuery] Guid? mediaUserId = null,
+        [FromQuery] DateTime? validFrom = null,
+        [FromQuery] DateTime? validTo = null,
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] decimal? maxPrice = null,
+        [FromQuery] decimal? minCpt = null,
+        [FromQuery] decimal? maxCpt = null,
+        [FromQuery] OfferTag? tag = null,
+        [FromQuery] string? searchQuery = null)
     {
-        var offers = await offerService.GetAllAsync();
+        // Konvertuj dátumy na UTC ak sú zadané
+        var validFromUtc = validFrom.HasValue ? ConvertToUtc(validFrom.Value) : (DateTime?)null;
+        var validToUtc = validTo.HasValue ? ConvertToUtc(validTo.Value) : (DateTime?)null;
 
-        if (status.HasValue)
-            offers = offers.Where(o => o.Status == status.Value).ToList();
-
-        if (mediaType.HasValue)
-            offers = offers.Where(o => o.MediaType == mediaType.Value).ToList();
-
-        if (mediaUserId.HasValue)
-            offers = offers.Where(o => o.MediaUserId == mediaUserId.Value).ToList();
+        var offers = await offerService.GetFilteredAsync(
+            status: status,
+            mediaType: mediaType,
+            mediaUserId: mediaUserId,
+            format: null,
+            validFrom: validFromUtc,
+            validTo: validToUtc,
+            minPrice: minPrice,
+            maxPrice: maxPrice,
+            minCpt: minCpt,
+            maxCpt: maxCpt,
+            tag: tag,
+            searchQuery: searchQuery);
 
         var response = offers.Select(o => MapToResponse(o)).ToList();
         return Results.Ok(response);
