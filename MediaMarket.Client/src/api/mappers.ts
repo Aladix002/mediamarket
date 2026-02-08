@@ -28,15 +28,13 @@ export const MediaTypeReverseMap: Record<number, keyof typeof MediaTypeMap> = {
 };
 
 export const OfferStatusMap = {
-  'draft': 0,
-  'published': 1,
-  'archived': 2,
+  'published': 0,
+  'archived': 1,
 } as const;
 
 export const OfferStatusReverseMap: Record<number, keyof typeof OfferStatusMap> = {
-  0: 'draft',
-  1: 'published',
-  2: 'archived',
+  0: 'published',
+  1: 'archived',
 };
 
 export const OrderStatusMap = {
@@ -112,7 +110,7 @@ export function mapOfferResponseToOffer(response: MediaMarket_API_DTOs_Offers_Re
     lastOrderDate: response.lastOrderDay ?? undefined,
     tags,
     requireFinalClient: false, // Backend už nemá toto pole
-    status: response.status !== undefined ? OfferStatusReverseMap[response.status] : 'draft',
+    status: response.status !== undefined ? OfferStatusReverseMap[response.status] : 'published',
   };
 }
 

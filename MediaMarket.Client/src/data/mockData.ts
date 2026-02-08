@@ -61,7 +61,7 @@ export interface Offer {
   lastOrderDate?: string;
   tags: OfferTag[];
   requireFinalClient: boolean;
-  status: 'draft' | 'published' | 'archived';
+  status: 'published' | 'archived';
 }
 
 export const mockOffers: Offer[] = [

@@ -32,7 +32,7 @@ public class Offer
     public string? TechnicalConditionsUrl { get; set; }
 
     // Stav
-    public OfferStatus Status { get; set; } = OfferStatus.Draft;
+    public OfferStatus Status { get; set; } = OfferStatus.Published;
 
     // Casove znacky
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

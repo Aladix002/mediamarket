@@ -18,7 +18,7 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
 
         RuleFor(x => x.PreferredTo)
             .NotEmpty().WithMessage("Datum do je povinny")
-            .GreaterThan(x => x.PreferredFrom).WithMessage("Datum do musi byt neskor ako datum od");
+            .GreaterThanOrEqualTo(x => x.PreferredFrom).WithMessage("Datum do musi byt stejny nebo neskor ako datum od");
 
         RuleFor(x => x.QuantityUnits)
             .InclusiveBetween(1, 100).When(x => x.QuantityUnits.HasValue)

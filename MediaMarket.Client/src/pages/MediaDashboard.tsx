@@ -13,7 +13,7 @@ import {
 import { OrderStatus } from '@/data/mockData';
 import { useApp } from '@/contexts/AppContext';
 import EmptyState from '@/components/EmptyState';
-import { Plus, Edit, Archive, FileText, Inbox, ExternalLink, Loader2 } from 'lucide-react';
+import { Plus, Edit, Archive, FileText, Inbox, ExternalLink, Loader2, Download } from 'lucide-react';
 import { useOffers, useOrders, useUpdateOrderStatus } from '@/api/hooks';
 
 const MediaDashboard = () => {
@@ -31,13 +31,11 @@ const MediaDashboard = () => {
   const myOrders = allOrders;
 
   const statusStyles: Record<string, string> = {
-    draft: 'bg-secondary text-secondary-foreground',
     published: 'bg-emerald-100 text-emerald-700',
     archived: 'bg-muted text-muted-foreground',
   };
 
   const statusLabels: Record<string, string> = {
-    draft: 'Koncept',
     published: 'Publikováno',
     archived: 'Archivováno',
   };
@@ -61,7 +59,29 @@ const MediaDashboard = () => {
     return new Date(dateStr).toLocaleDateString('cs-CZ', {
       day: 'numeric',
       month: 'short',
+      year: 'numeric',
     });
+  };
+
+  const handleDownloadPdf = async (orderId: string, orderNumber: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5234'}/api/orders/${orderId}/pdf`);
+      if (!response.ok) {
+        throw new Error('Nepodařilo se stáhnout PDF');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `objednavka-${orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Chyba při stahování PDF:', error);
+      alert('Nepodařilo se stáhnout PDF objednávky');
+    }
   };
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
@@ -231,25 +251,36 @@ const MediaDashboard = () => {
                       )}
                     </div>
                     
-                    {/* Status change dropdown */}
-                    {canChangeStatus && (
-                      <div className="flex flex-col gap-2 min-w-[200px]">
-                        <p className="text-sm text-muted-foreground">Zadejte stav objednávky</p>
-                        <Select
-                          value={order.status}
-                          onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="nová">nová</SelectItem>
-                            <SelectItem value="v řešení">v řešení</SelectItem>
-                            <SelectItem value="objednávka uzavřena">objednávka uzavřena</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDownloadPdf(order.id, order.orderId)}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Stáhnout PDF
+                      </Button>
+                      {/* Status change dropdown */}
+                      {canChangeStatus && (
+                        <div className="flex flex-col gap-2 min-w-[200px]">
+                          <p className="text-sm text-muted-foreground">Zadejte stav objednávky</p>
+                          <Select
+                            value={order.status}
+                            onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="nová">nová</SelectItem>
+                              <SelectItem value="v řešení">v řešení</SelectItem>
+                              <SelectItem value="objednávka uzavřena">objednávka uzavřena</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

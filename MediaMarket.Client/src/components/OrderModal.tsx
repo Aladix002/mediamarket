@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { Offer } from '@/data/mockData';
@@ -73,7 +74,10 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
         .refine((date) => {
           if (lastOrderDay) {
             const selectedDate = new Date(date);
-            return selectedDate >= lastOrderDay;
+            selectedDate.setHours(0, 0, 0, 0);
+            const lastOrderDayDate = new Date(lastOrderDay);
+            lastOrderDayDate.setHours(0, 0, 0, 0);
+            return selectedDate >= lastOrderDayDate;
           }
           return true;
         }, lastOrderDay
@@ -109,12 +113,23 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
       finalClient: z.string().optional(),
       note: z.string().max(2000, 'Poznámka může mít maximálně 2000 znaků').optional(),
     }).refine((data) => {
-      // Validácia PreferredTo > PreferredFrom
-      const fromDate = new Date(data.preferredFrom);
-      const toDate = new Date(data.preferredTo);
-      return toDate > fromDate;
+      // Validácia finalClient - musí byť vyplnený ak offer.requireFinalClient = true
+      if (offer.requireFinalClient && (!data.finalClient || data.finalClient.trim().length === 0)) {
+        return false;
+      }
+      return true;
     }, {
-      message: 'Preferovaný termín do musí být později než termín od',
+      message: 'Finální klient je povinný',
+      path: ['finalClient'],
+    }).refine((data) => {
+      // Validácia PreferredTo >= PreferredFrom
+      const fromDate = new Date(data.preferredFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      const toDate = new Date(data.preferredTo);
+      toDate.setHours(0, 0, 0, 0);
+      return toDate >= fromDate;
+    }, {
+      message: 'Preferovaný termín do musí být stejný nebo později než termín od',
       path: ['preferredTo'],
     }).refine((data) => {
       if (pricingType === 'unit') {
@@ -149,6 +164,7 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
 
   // Watch form values
   const watchedValues = form.watch();
+  const formErrors = form.formState.errors;
   
   // Normalize impressions input (remove spaces, convert to number)
   const normalizedImpressions = useMemo(() => {
@@ -156,6 +172,32 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
     const num = parseInt(cleaned);
     return isNaN(num) || num <= 0 ? 0 : num;
   }, [watchedValues.impressions]);
+
+  // Get missing required fields for tooltip
+  const getMissingRequiredFields = (): string[] => {
+    const missing: string[] = [];
+    
+    if (!watchedValues.preferredFrom) {
+      missing.push('Preferovaný termín od');
+    }
+    if (!watchedValues.preferredTo) {
+      missing.push('Preferovaný termín do');
+    }
+    if (pricingType === 'unit' && (!watchedValues.quantity || parseInt(watchedValues.quantity || '0') < 1)) {
+      missing.push('Počet ks');
+    }
+    if (pricingType === 'cpt' && normalizedImpressions === 0) {
+      missing.push('Počet zobrazení');
+    }
+    if (offer.requireFinalClient && (!watchedValues.finalClient || watchedValues.finalClient.trim().length === 0)) {
+      missing.push('Finální klient');
+    }
+    if (offer.minOrderValue && totalPrice < offer.minOrderValue) {
+      missing.push(`Minimální hodnota objednávky (${formatPrice(offer.minOrderValue)})`);
+    }
+    
+    return missing;
+  };
 
   // Calculate total price (with discount)
   const totalPrice = useMemo(() => {
@@ -274,7 +316,7 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">
             Objednávka
@@ -297,38 +339,67 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
               <FormField
                 control={form.control}
                 name="preferredFrom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preferovaný termín od *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        {...field}
-                        min={new Date().toISOString().split('T')[0]}
-                        max={offer.validTo ? new Date(offer.validTo).toISOString().split('T')[0] : undefined}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Calculate min date: max of today, offer.validFrom, and lastOrderDay
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const offerValidFrom = offer.validFrom ? new Date(offer.validFrom) : null;
+                  if (offerValidFrom) offerValidFrom.setHours(0, 0, 0, 0);
+                  const lastOrderDay = offer.lastOrderDate ? new Date(offer.lastOrderDate) : null;
+                  if (lastOrderDay) lastOrderDay.setHours(0, 0, 0, 0);
+                  
+                  const minDate = [today, offerValidFrom, lastOrderDay]
+                    .filter(d => d !== null)
+                    .reduce((max, d) => (d! > max ? d! : max), today);
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Preferovaný termín od *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          min={minDate.toISOString().split('T')[0]}
+                          max={offer.validTo ? new Date(offer.validTo).toISOString().split('T')[0] : undefined}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}
                 name="preferredTo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preferovaný termín do *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        {...field}
-                        min={watchedValues.preferredFrom || new Date().toISOString().split('T')[0]}
-                        max={offer.validTo ? new Date(offer.validTo).toISOString().split('T')[0] : undefined}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Calculate min date: preferredFrom (môže byť rovný) or today
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const preferredFromDate = watchedValues.preferredFrom 
+                    ? new Date(watchedValues.preferredFrom) 
+                    : null;
+                  if (preferredFromDate) preferredFromDate.setHours(0, 0, 0, 0);
+                  
+                  // Min date môže byť preferredFrom (môže byť rovný) alebo today, ak preferredFrom nie je vyplnený
+                  const minDate = preferredFromDate && preferredFromDate >= today 
+                    ? preferredFromDate 
+                    : today;
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Preferovaný termín do *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          min={minDate.toISOString().split('T')[0]}
+                          max={offer.validTo ? new Date(offer.validTo).toISOString().split('T')[0] : undefined}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
 
@@ -503,24 +574,66 @@ const OrderModal = ({ offer, open, onOpenChange }: OrderModalProps) => {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={creatingOrder}>
               Zrušit
             </Button>
-            <Button 
-              type="submit" 
-              className="flex-1"
-              disabled={
-                creatingOrder ||
-                (offer.minOrderValue && totalPrice < offer.minOrderValue) ||
-                (pricingType === 'cpt' && normalizedImpressions === 0)
-              }
-            >
-              {creatingOrder ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Odesílám...
-                </>
-              ) : (
-                'Odeslat objednávku'
-              )}
-            </Button>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex-1">
+                    {(() => {
+                      const isDisabled = 
+                        creatingOrder ||
+                        (offer.minOrderValue && totalPrice < offer.minOrderValue) ||
+                        (pricingType === 'cpt' && normalizedImpressions === 0) ||
+                        !watchedValues.preferredFrom ||
+                        !watchedValues.preferredTo ||
+                        (pricingType === 'unit' && (!watchedValues.quantity || parseInt(watchedValues.quantity || '0') < 1)) ||
+                        (offer.requireFinalClient && (!watchedValues.finalClient || watchedValues.finalClient.trim().length === 0));
+                      
+                      return (
+                        <Button 
+                          type="submit" 
+                          className="w-full"
+                          disabled={isDisabled}
+                        >
+                          {creatingOrder ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Odesílám...
+                            </>
+                          ) : (
+                            'Odeslat objednávku'
+                          )}
+                        </Button>
+                      );
+                    })()}
+                  </span>
+                </TooltipTrigger>
+                {(() => {
+                  const missingFields = getMissingRequiredFields();
+                  const isDisabled = 
+                    creatingOrder ||
+                    (offer.minOrderValue && totalPrice < offer.minOrderValue) ||
+                    (pricingType === 'cpt' && normalizedImpressions === 0) ||
+                    !watchedValues.preferredFrom ||
+                    !watchedValues.preferredTo ||
+                    (pricingType === 'unit' && (!watchedValues.quantity || parseInt(watchedValues.quantity || '0') < 1)) ||
+                    (offer.requireFinalClient && (!watchedValues.finalClient || watchedValues.finalClient.trim().length === 0));
+                  
+                  if (isDisabled && !creatingOrder && missingFields.length > 0) {
+                    return (
+                      <TooltipContent>
+                        <p className="font-medium mb-1">Chybí povinná pole:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {missingFields.map((field, index) => (
+                            <li key={index} className="text-sm">{field}</li>
+                          ))}
+                        </ul>
+                      </TooltipContent>
+                    );
+                  }
+                  return null;
+                })()}
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Terms agreement */}

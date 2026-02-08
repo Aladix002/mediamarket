@@ -17,4 +17,5 @@ public interface IOrderService
     Task<bool> DeleteAsync(Guid id);
     Task<bool> ChangeStatusAsync(Guid id, OrderStatus newStatus);
     Task<bool> CloseOrderAsync(Guid id); // Automaticky vypocita commission
+    Task<int> CloseExpiredOrdersAsync(); // Automatické uzatváranie orders s PreferredTo < DateTime.UtcNow
 }

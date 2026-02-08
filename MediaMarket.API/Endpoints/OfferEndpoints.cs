@@ -150,7 +150,7 @@ public static class OfferEndpoints
             ValidTo = validToUtc,
             TechnicalConditionsText = request.TechnicalConditionsText,
             TechnicalConditionsUrl = request.TechnicalConditionsUrl,
-            Status = OfferStatus.Draft,
+            Status = OfferStatus.Published,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

@@ -91,7 +91,7 @@ const AddOffer = () => {
   const missingFields = getMissingRequiredFields();
   const isFormValid = missingFields.length === 0;
 
-  const onSubmit = async (data: OfferFormData, action: 'draft' | 'publish') => {
+  const onSubmit = async (data: OfferFormData) => {
     try {
       setSubmitting(true);
 
@@ -141,14 +141,9 @@ const AddOffer = () => {
         },
       });
 
-      // Ak je publish, publikuj ponuku
-      if (action === 'publish' && response.id) {
-        await apiClient.offers.publishOffer({ id: response.id });
-      }
-
       toast({
         title: 'Úspech',
-        description: action === 'publish' ? 'Ponuka bola úspešne publikovaná' : 'Ponuka bola uložená ako draft',
+        description: 'Ponuka bola úspešne publikovaná',
       });
 
       navigate('/media');
@@ -163,8 +158,8 @@ const AddOffer = () => {
     }
   };
 
-  const handleSubmit = (action: 'draft' | 'publish') => {
-    form.handleSubmit((data) => onSubmit(data, action))();
+  const handleSubmit = () => {
+    form.handleSubmit((data) => onSubmit(data))();
   };
 
 
@@ -190,8 +185,7 @@ const AddOffer = () => {
             submitting={submitting}
             isFormValid={isFormValid}
             missingFields={missingFields}
-            onDraft={() => handleSubmit('draft')}
-            onPublish={() => handleSubmit('publish')}
+            onPublish={() => handleSubmit()}
           />
         </form>
       </div>

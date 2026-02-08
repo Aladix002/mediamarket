@@ -26,10 +26,10 @@ public class OrderValidator : AbstractValidator<Order>
             .GreaterThanOrEqualTo(DateTime.UtcNow.Date)
             .WithMessage("Preferovany termin od nemoze byt skor ako dnes");
 
-        // Validacia PreferredTo > PreferredFrom
+        // Validacia PreferredTo >= PreferredFrom
         RuleFor(o => o)
-            .Must(o => o.PreferredTo > o.PreferredFrom)
-            .WithMessage("Preferovany termin do musi byt neskor ako preferovany termin od");
+            .Must(o => o.PreferredTo >= o.PreferredFrom)
+            .WithMessage("Preferovany termin do musi byt stejny nebo neskor ako preferovany termin od");
 
         RuleFor(o => o.PricingModelSnapshot)
             .IsInEnum().WithMessage("Neplatny cenovy model");

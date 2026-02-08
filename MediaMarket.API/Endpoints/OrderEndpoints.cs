@@ -43,6 +43,12 @@ public static class OrderEndpoints
             .WithSummary("Zmazanie objednavky")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/pdf", ExportOrderPdfAsync)
+            .WithName("ExportOrderPdf")
+            .WithSummary("Export objednavky do PDF")
+            .Produces(StatusCodes.Status200OK, "application/pdf")
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     private static async Task<IResult> GetOrdersAsync(
@@ -111,9 +117,9 @@ public static class OrderEndpoints
             return Results.BadRequest(new { message = "PreferredTo je povinný dátum" });
         }
 
-        if (request.PreferredTo <= request.PreferredFrom)
+        if (request.PreferredTo < request.PreferredFrom)
         {
-            return Results.BadRequest(new { message = "PreferredTo musí byť neskôr ako PreferredFrom" });
+            return Results.BadRequest(new { message = "PreferredTo musí byť stejný alebo neskôr ako PreferredFrom" });
         }
 
         var validationResult = await validator.ValidateAsync(request);
@@ -280,6 +286,24 @@ public static class OrderEndpoints
         
         // Ak je dátum Local, konvertuj na UTC
         return dateTime.ToUniversalTime();
+    }
+
+    private static async Task<IResult> ExportOrderPdfAsync(
+        Guid id,
+        [FromServices] IOrderService orderService,
+        [FromServices] MediaMarket.BL.Services.Orders.OrderPdfService pdfService)
+    {
+        var order = await orderService.GetByIdAsync(id);
+        if (order == null)
+            return Results.NotFound();
+
+        var pdfBytes = pdfService.GenerateOrderPdf(order);
+        var fileName = $"objednavka-{order.OrderNumber}.pdf";
+
+        return Results.File(
+            pdfBytes,
+            "application/pdf",
+            fileName);
     }
 
     private static OrderResponse MapToResponse(Order order)

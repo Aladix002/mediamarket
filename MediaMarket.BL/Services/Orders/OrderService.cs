@@ -167,6 +167,34 @@ public class OrderService : IOrderService
         return await ChangeStatusAsync(id, OrderStatus.Closed);
     }
 
+    public async Task<int> CloseExpiredOrdersAsync()
+    {
+        var now = DateTime.UtcNow;
+        var expiredOrders = await _context.Orders
+            .Where(o => o.Status != OrderStatus.Closed && o.PreferredTo < now)
+            .ToListAsync();
+
+        foreach (var order in expiredOrders)
+        {
+            var oldStatus = order.Status;
+            order.Status = OrderStatus.Closed;
+            order.UpdatedAt = now;
+
+            // Vypočítaj commission ak ešte nebola vypočítaná
+            if (!order.CommissionRate.HasValue)
+            {
+                _commissionService.CalculateCommission(order);
+            }
+        }
+
+        if (expiredOrders.Count > 0)
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        return expiredOrders.Count;
+    }
+
     private static string GenerateOrderNumber()
     {
         var date = DateTime.UtcNow;

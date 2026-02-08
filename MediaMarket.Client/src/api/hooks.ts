@@ -17,7 +17,7 @@ const getApiBaseUrl = () => {
  * Hook pre načítanie ponúk
  */
 export function useOffers(filters?: {
-  status?: 'draft' | 'published' | 'archived';
+  status?: 'published' | 'archived';
   mediaType?: 'online' | 'rádio' | 'OOH' | 'print' | 'sociální sítě' | 'video' | 'influenceři';
   mediaUserId?: string;
   validFrom?: string; // ISO date string
@@ -48,7 +48,7 @@ export function useOffers(filters?: {
       const queryParams = new URLSearchParams();
       
       if (filters?.status !== undefined) {
-        queryParams.append('status', String(filters.status === 'draft' ? 0 : filters.status === 'published' ? 1 : 2));
+        queryParams.append('status', String(filters.status === 'published' ? 0 : 1));
       }
       if (filters?.mediaType !== undefined) {
         queryParams.append('mediaType', String(

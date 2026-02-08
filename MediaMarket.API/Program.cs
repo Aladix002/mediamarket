@@ -104,6 +104,10 @@ builder.Services.AddScoped<MediaMarket.BL.Interfaces.IUserService, MediaMarket.B
 builder.Services.AddScoped<MediaMarket.BL.Interfaces.IOfferService, MediaMarket.BL.Services.Offers.OfferService>();
 builder.Services.AddScoped<MediaMarket.BL.Interfaces.IOrderService, MediaMarket.BL.Services.Orders.OrderService>();
 builder.Services.AddScoped<MediaMarket.BL.Services.Orders.OrderCommissionService>();
+builder.Services.AddScoped<MediaMarket.BL.Services.Orders.OrderPdfService>();
+
+// Background Services
+builder.Services.AddHostedService<MediaMarket.BL.Services.Background.StatusUpdateBackgroundService>();
 
 // ARES Service
 builder.Services.AddHttpClient<MediaMarket.BL.Interfaces.IARESService, MediaMarket.BL.Services.ARES.ARESService>();

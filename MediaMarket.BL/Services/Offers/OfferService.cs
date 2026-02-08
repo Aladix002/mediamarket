@@ -231,4 +231,25 @@ public class OfferService : IOfferService
         await _context.SaveChangesAsync();
         return true;
     }
+
+    public async Task<int> ArchiveExpiredOffersAsync()
+    {
+        var now = DateTime.UtcNow;
+        var expiredOffers = await _context.Offers
+            .Where(o => o.Status == OfferStatus.Published && o.ValidTo < now)
+            .ToListAsync();
+
+        foreach (var offer in expiredOffers)
+        {
+            offer.Status = OfferStatus.Archived;
+            offer.UpdatedAt = now;
+        }
+
+        if (expiredOffers.Count > 0)
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        return expiredOffers.Count;
+    }
 }

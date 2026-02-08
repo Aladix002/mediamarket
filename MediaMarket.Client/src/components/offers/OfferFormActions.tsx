@@ -1,12 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Save, Send, Loader2 } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 
 interface OfferFormActionsProps {
   submitting: boolean;
   isFormValid: boolean;
   missingFields: string[];
-  onDraft: () => void;
   onPublish: () => void;
 }
 
@@ -14,30 +13,10 @@ export const OfferFormActions = ({
   submitting, 
   isFormValid, 
   missingFields, 
-  onDraft, 
   onPublish 
 }: OfferFormActionsProps) => {
   return (
     <div className="flex gap-3">
-      <Button 
-        type="button" 
-        variant="outline" 
-        onClick={onDraft} 
-        className="flex-1"
-        disabled={submitting}
-      >
-        {submitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Ukladám...
-          </>
-        ) : (
-          <>
-            <Save className="mr-2 h-4 w-4" />
-            Uložit draft
-          </>
-        )}
-      </Button>
       <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>

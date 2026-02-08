@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/contexts/AppContext';
 import EmptyState from '@/components/EmptyState';
-import { ExternalLink, Inbox, Loader2 } from 'lucide-react';
+import { ExternalLink, Inbox, Loader2, Download } from 'lucide-react';
 import { OrderStatus } from '@/data/mockData';
 import { useOrders } from '@/api/hooks';
+import { apiClient } from '@/api/client';
 
 const AgencyDashboard = () => {
   const { role, userId } = useApp();
@@ -36,6 +37,27 @@ const AgencyDashboard = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(price);
+  };
+
+  const handleDownloadPdf = async (orderId: string, orderNumber: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5234'}/api/orders/${orderId}/pdf`);
+      if (!response.ok) {
+        throw new Error('Nepodařilo se stáhnout PDF');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `objednavka-${orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Chyba při stahování PDF:', error);
+      alert('Nepodařilo se stáhnout PDF objednávky');
+    }
   };
 
   return (
@@ -108,11 +130,21 @@ const AgencyDashboard = () => {
                       <p className="text-muted-foreground">Celková cena</p>
                       <p className="font-medium">{formatPrice(order.totalPrice)}</p>
                     </div>
-                    <Link to={`/offers/${order.offerId}`}>
-                      <Button variant="outline" size="sm">
-                        Detail nabídky
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDownloadPdf(order.id, order.orderId)}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        PDF
                       </Button>
-                    </Link>
+                      <Link to={`/offers/${order.offerId}`}>
+                        <Button variant="outline" size="sm">
+                          Detail nabídky
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>

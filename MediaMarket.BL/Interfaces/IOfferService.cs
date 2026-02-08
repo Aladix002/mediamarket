@@ -30,4 +30,5 @@ public interface IOfferService
     Task<bool> DeleteAsync(Guid id);
     Task<bool> PublishAsync(Guid id);
     Task<bool> ArchiveAsync(Guid id);
+    Task<int> ArchiveExpiredOffersAsync(); // Automatická archivácia offers s ValidTo < DateTime.UtcNow
 }
