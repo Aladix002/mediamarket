@@ -47,7 +47,7 @@ public static class OrderEndpoints
         group.MapGet("/{id:guid}/pdf", ExportOrderPdfAsync)
             .WithName("ExportOrderPdf")
             .WithSummary("Export objednavky do PDF")
-            .Produces(StatusCodes.Status200OK, "application/pdf")
+            .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
     }
 

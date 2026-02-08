@@ -32,8 +32,8 @@ public class OrderPdfService
                     .PaddingVertical(1, Unit.Centimetre)
                     .Column(column =>
                     {
-                        // Informácie o objednávke
-                        column.Item().Text("Informácie o objednávke").FontSize(14).Bold().PaddingBottom(5);
+                        // Informace o objednávce
+                        column.Item().PaddingBottom(5).Text("Informace o objednávce").FontSize(14).Bold();
                         column.Item().Table(table =>
                         {
                             table.ColumnsDefinition(columns =>
@@ -42,29 +42,29 @@ public class OrderPdfService
                                 columns.RelativeColumn(3);
                             });
 
-                            table.Cell().Element(CellStyle).Text("Ponuka:");
+                            table.Cell().Element(CellStyle).Text("Nabídka:");
                             table.Cell().Element(CellStyle).Text(order.Offer?.Title ?? "N/A");
 
                             table.Cell().Element(CellStyle).Text("Médium:");
                             table.Cell().Element(CellStyle).Text(order.MediaUser?.CompanyName ?? "N/A");
 
-                            table.Cell().Element(CellStyle).Text("Agentúra:");
+                            table.Cell().Element(CellStyle).Text("Agentura:");
                             table.Cell().Element(CellStyle).Text(order.AgencyUser?.CompanyName ?? "N/A");
 
-                            table.Cell().Element(CellStyle).Text("Kontakt (Agentúra):");
+                            table.Cell().Element(CellStyle).Text("Kontakt (Agentura):");
                             table.Cell().Element(CellStyle).Text(order.AgencyUser?.ContactName ?? "N/A");
 
                             table.Cell().Element(CellStyle).Text("Status:");
                             table.Cell().Element(CellStyle).Text(GetStatusText(order.Status));
 
-                            table.Cell().Element(CellStyle).Text("Dátum vytvorenia:");
+                            table.Cell().Element(CellStyle).Text("Datum vytvoření:");
                             table.Cell().Element(CellStyle).Text(order.CreatedAt.ToString("dd.MM.yyyy HH:mm"));
                         });
 
                         column.Item().PaddingTop(15);
 
-                        // Preferované dátumy
-                        column.Item().Text("Preferované dátumy").FontSize(14).Bold().PaddingBottom(5);
+                        // Preferované termíny
+                        column.Item().PaddingBottom(5).Text("Preferované termíny").FontSize(14).Bold();
                         column.Item().Table(table =>
                         {
                             table.ColumnsDefinition(columns =>
@@ -82,8 +82,8 @@ public class OrderPdfService
 
                         column.Item().PaddingTop(15);
 
-                        // Cenové informácie
-                        column.Item().Text("Cenové informácie").FontSize(14).Bold().PaddingBottom(5);
+                        // Cenové informace
+                        column.Item().PaddingBottom(5).Text("Cenové informace").FontSize(14).Bold();
                         column.Item().Table(table =>
                         {
                             table.ColumnsDefinition(columns =>
@@ -122,11 +122,11 @@ public class OrderPdfService
                             table.Cell().Element(CellStyle).Text($"{order.TotalPrice:N2} EUR").Bold();
                         });
 
-                        // Provízia (ak je uzavretá objednávka)
+                        // Provize (pokud je uzavřená objednávka)
                         if (order.Status == DAL.Enums.OrderStatus.Closed && order.CommissionAmount.HasValue)
                         {
                             column.Item().PaddingTop(15);
-                            column.Item().Text("Provízia").FontSize(14).Bold().PaddingBottom(5);
+                            column.Item().PaddingBottom(5).Text("Provize").FontSize(14).Bold();
                             column.Item().Table(table =>
                             {
                                 table.ColumnsDefinition(columns =>
@@ -135,12 +135,12 @@ public class OrderPdfService
                                     columns.RelativeColumn(3);
                                 });
 
-                                table.Cell().Element(CellStyle).Text("Provízna sadzba:");
+                                table.Cell().Element(CellStyle).Text("Provizní sazba:");
                                 table.Cell().Element(CellStyle).Text(order.CommissionRate.HasValue 
                                     ? $"{(order.CommissionRate.Value * 100):N1}%" 
                                     : "N/A");
 
-                                table.Cell().Element(CellStyle).Text("Provízna suma:");
+                                table.Cell().Element(CellStyle).Text("Provizní částka:");
                                 table.Cell().Element(CellStyle).Text($"{order.CommissionAmount.Value:N2} EUR").Bold();
                             });
                         }
@@ -149,7 +149,7 @@ public class OrderPdfService
                         if (!string.IsNullOrWhiteSpace(order.Note))
                         {
                             column.Item().PaddingTop(15);
-                            column.Item().Text("Poznámka").FontSize(14).Bold().PaddingBottom(5);
+                            column.Item().PaddingBottom(5).Text("Poznámka").FontSize(14).Bold();
                             column.Item().Text(order.Note).FontSize(10);
                         }
                     });
@@ -158,7 +158,7 @@ public class OrderPdfService
                     .AlignCenter()
                     .Text(x =>
                     {
-                        x.Span("Vygenerované: ");
+                        x.Span("Vygenerováno: ");
                         x.Span(DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm")).FontColor(Colors.Grey.Medium);
                     });
             });
