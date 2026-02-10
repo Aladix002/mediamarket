@@ -1,12 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useApp, UserRole } from '@/contexts/AppContext';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
 const Header = () => {
-  const { role, setRole } = useApp();
+  const { role } = useApp();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -60,24 +59,8 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Role Switcher */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Role:</span>
-              <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                <SelectTrigger className="w-[120px] h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="visitor">Visitor</SelectItem>
-                  <SelectItem value="agency">Agency</SelectItem>
-                  <SelectItem value="media">Media</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Mobile Menu Toggle */}
+          {/* Mobile Menu Toggle */}
+          <div className="flex items-center">
             <Button
               variant="ghost"
               size="icon"
@@ -108,20 +91,6 @@ const Header = () => {
                 </Link>
               ))}
             </nav>
-            <div className="mt-4 pt-4 border-t flex items-center gap-2 px-3">
-              <span className="text-xs text-muted-foreground">Role:</span>
-              <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                <SelectTrigger className="flex-1 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="visitor">Visitor</SelectItem>
-                  <SelectItem value="agency">Agency</SelectItem>
-                  <SelectItem value="media">Media</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         )}
       </div>

@@ -8,9 +8,10 @@ public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
 {
     public UpdateUserRequestValidator()
     {
+        // CompanyName je voliteľný (nie je možné ho meniť cez profil)
         RuleFor(x => x.CompanyName)
-            .NotEmpty().WithMessage("Nazov spolocnosti je povinny")
-            .MaximumLength(255).WithMessage("Nazov spolocnosti moze mat maximalne 255 znakov");
+            .MaximumLength(255).WithMessage("Nazov spolocnosti moze mat maximalne 255 znakov")
+            .When(x => !string.IsNullOrEmpty(x.CompanyName));
 
         RuleFor(x => x.ContactName)
             .NotEmpty().WithMessage("Kontaktna osoba je povinna")

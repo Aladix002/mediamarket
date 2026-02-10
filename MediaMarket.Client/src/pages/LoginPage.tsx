@@ -10,7 +10,7 @@ import { useApp } from '@/contexts/AppContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { setRole, setUserId, setAccessToken } = useApp();
+  const { setRole, setUserId, setAccessToken, setRefreshToken } = useApp();
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -33,6 +33,9 @@ const LoginPage = () => {
       if (response.success && response.accessToken && response.user) {
         // Uloz token a user info
         setAccessToken(response.accessToken);
+        if (response.refreshToken) {
+          setRefreshToken(response.refreshToken);
+        }
         setUserId(response.user.id.toString());
         setRole(response.user.role.toLowerCase() as 'agency' | 'media' | 'admin');
         
@@ -125,7 +128,14 @@ const LoginPage = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Heslo</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Heslo</Label>
+              <Link to="/forgot-password">
+                <Button type="button" variant="link" className="text-xs h-auto p-0">
+                  Zapomněli jste heslo?
+                </Button>
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"

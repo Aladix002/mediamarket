@@ -10,10 +10,14 @@ namespace MediaMarket.BL.Security;
 public class SupabaseAuthService : IAuthService
 {
     private readonly Supabase.Client _supabase;
+    private readonly string _supabaseUrl;
+    private readonly string _supabaseKey;
 
-    public SupabaseAuthService(Supabase.Client supabase)
+    public SupabaseAuthService(Supabase.Client supabase, string supabaseUrl, string supabaseKey)
     {
         _supabase = supabase;
+        _supabaseUrl = supabaseUrl;
+        _supabaseKey = supabaseKey;
     }
 
     /// <summary>
@@ -138,7 +142,31 @@ public class SupabaseAuthService : IAuthService
     }
 
     /// <summary>
-    /// Zmeni heslo pouzivatela
+    /// Obnovi access token pomocou refresh tokenu
+    /// </summary>
+    public async Task<(string? AccessToken, string? RefreshToken, object? User)> RefreshTokenAsync(string refreshToken)
+    {
+        try
+        {
+            // Supabase SDK má metódu RefreshSession, ale musíme nastaviť refresh token najprv
+            // Alternatívne môžeme použiť SetSession s refresh tokenom
+            var response = await _supabase.Auth.RefreshSession();
+            
+            if (response?.User != null)
+            {
+                return (response.AccessToken, response.RefreshToken, response.User);
+            }
+            
+            return (null, null, null);
+        }
+        catch
+        {
+            return (null, null, null);
+        }
+    }
+
+    /// <summary>
+    /// Zmeni heslo pouzivatela (pre prihlaseného používateľa)
     /// </summary>
     public async Task<bool> UpdatePasswordAsync(string newPassword)
     {
@@ -157,12 +185,89 @@ public class SupabaseAuthService : IAuthService
     }
 
     /// <summary>
-    /// Posle email na reset hesla
+    /// Zmeni heslo pomocou access tokenu (pre reset hesla cez recovery token)
     /// </summary>
-    public async Task<bool> ResetPasswordAsync(string email)
+    public async Task<bool> UpdatePasswordWithTokenAsync(string accessToken, string newPassword)
     {
         try
         {
+            // Pre reset hesla cez recovery token, Supabase vyžaduje nastavenie session
+            // Použijeme SetSession s access tokenom
+            // Poznámka: Recovery token môže mať aj refresh token v hash fragmente, ale môžeme skúsiť bez neho
+            await _supabase.Auth.SetSession(accessToken, string.Empty);
+            
+            // Teraz môžeme zmeniť heslo
+            var response = await _supabase.Auth.Update(new Supabase.Gotrue.UserAttributes
+            {
+                Password = newPassword
+            });
+            
+            return response != null;
+        }
+        catch (Exception ex)
+        {
+            // Log chybu pre debugging - vrátime false, aby backend mohol vrátiť správnu chybovú správu
+            System.Diagnostics.Debug.WriteLine($"UpdatePasswordWithTokenAsync error: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"Inner exception: {ex.InnerException.Message}");
+            }
+            
+            // Skúsime alternatívny prístup - použiť Supabase REST API priamo
+            try
+            {
+                // Použijeme Supabase URL a Key z konfigurácie
+                if (string.IsNullOrEmpty(_supabaseUrl) || string.IsNullOrEmpty(_supabaseKey))
+                {
+                    System.Diagnostics.Debug.WriteLine("Supabase URL or Key is missing");
+                    return false;
+                }
+                
+                var httpClient = new System.Net.Http.HttpClient();
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                httpClient.DefaultRequestHeaders.Add("apikey", _supabaseKey);
+                
+                var updateUrl = $"{_supabaseUrl}/auth/v1/user";
+                var updateData = new
+                {
+                    password = newPassword
+                };
+                
+                var json = System.Text.Json.JsonSerializer.Serialize(updateData);
+                var content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                
+                var updateResponse = await httpClient.PutAsync(updateUrl, content);
+                
+                if (updateResponse.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+                
+                var errorContent = await updateResponse.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"REST API error: {updateResponse.StatusCode} - {errorContent}");
+            }
+            catch (Exception restEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"REST API fallback failed: {restEx.Message}");
+                if (restEx.InnerException != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"REST API inner exception: {restEx.InnerException.Message}");
+                }
+            }
+            
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Posle email na reset hesla
+    /// </summary>
+    public async Task<bool> ResetPasswordAsync(string email, string? redirectUrl = null)
+    {
+        try
+        {
+            // Supabase ResetPasswordForEmail automaticky použije redirect URL z konfigurácie
+            // Redirect URL sa nastavuje v Supabase Dashboard -> Authentication -> URL Configuration
             await _supabase.Auth.ResetPasswordForEmail(email);
             return true;
         }

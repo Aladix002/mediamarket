@@ -12,7 +12,7 @@ import { useResendVerification } from '@/api/hooks';
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { setRole, setUserId, setAccessToken } = useApp();
+  const { setRole, setUserId, setAccessToken, setRefreshToken } = useApp();
   const { resendVerification, loading: resending } = useResendVerification();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [submitted, setSubmitted] = useState(false);
@@ -224,6 +224,9 @@ const AuthPage = () => {
       if (response.success && response.accessToken && response.user) {
         // Uloz token a user info
         setAccessToken(response.accessToken);
+        if (response.refreshToken) {
+          setRefreshToken(response.refreshToken);
+        }
         setUserId(response.user.id.toString());
         setRole(response.user.role.toLowerCase() as 'agency' | 'media' | 'admin');
         

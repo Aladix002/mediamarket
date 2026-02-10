@@ -279,8 +279,8 @@ public static class UserEndpoints
                 return Results.Unauthorized();
             }
 
-            // Aktualizuj profil
-            user.CompanyName = request.CompanyName;
+            // Aktualizuj profil (CompanyName sa nemení - je len na čítanie)
+            // user.CompanyName zostáva nezmenený
             user.ContactName = request.ContactName;
             user.Phone = request.Phone;
 

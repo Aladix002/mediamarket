@@ -43,8 +43,30 @@ public static class DbInitializer
             if (existingUsers.Count >= 3)
             {
                 await SeedOffersAsync(context, mediaUserId);
+                await SeedOffersForAllMediaUsersAsync(context, mediaUserId);
                 return;
             }
+        }
+
+        // Ak seed používatelia neexistujú, skús vytvoriť offers pre existujúceho Media používateľa
+        var anyMediaUser = await context.Users
+            .Where(u => u.Role == UserRole.Media)
+            .FirstOrDefaultAsync();
+        
+        if (anyMediaUser != null)
+        {
+            // Vytvor offers pre existujúceho Media používateľa (ak ešte nemá offers)
+            var hasOffers = await context.Offers
+                .Where(o => o.MediaUserId == anyMediaUser.Id)
+                .AnyAsync();
+            
+            if (!hasOffers)
+            {
+                await SeedOffersAsync(context, anyMediaUser.Id);
+            }
+            
+            // Vytvor offers aj pre ostatných Media používateľov
+            await SeedOffersForAllMediaUsersAsync(context, anyMediaUser.Id);
         }
 
         // Použijeme rovnaký spôsob hashovania ako v PasswordHasher
@@ -103,6 +125,43 @@ public static class DbInitializer
 
         // Seed offers - vytvorime roznorode offers pre testovanie filtrov
         await SeedOffersAsync(context, mediaUserId);
+        
+        // Vytvor offers aj pre existujúcich Media používateľov (ak ešte nemajú offers)
+        var additionalMediaUsers = await context.Users
+            .Where(u => u.Role == UserRole.Media && u.Id != mediaUserId)
+            .ToListAsync();
+        
+        foreach (var mediaUser in additionalMediaUsers)
+        {
+            var hasOffers = await context.Offers
+                .Where(o => o.MediaUserId == mediaUser.Id)
+                .AnyAsync();
+            
+            if (!hasOffers)
+            {
+                await SeedOffersAsync(context, mediaUser.Id);
+            }
+        }
+    }
+
+    private static async Task SeedOffersForAllMediaUsersAsync(ApplicationDbContext context, Guid excludeUserId)
+    {
+        // Vytvor offers aj pre existujúcich Media používateľov (ak ešte nemajú offers)
+        var allMediaUsers = await context.Users
+            .Where(u => u.Role == UserRole.Media && u.Id != excludeUserId)
+            .ToListAsync();
+        
+        foreach (var mediaUser in allMediaUsers)
+        {
+            var hasOffers = await context.Offers
+                .Where(o => o.MediaUserId == mediaUser.Id)
+                .AnyAsync();
+            
+            if (!hasOffers)
+            {
+                await SeedOffersAsync(context, mediaUser.Id);
+            }
+        }
     }
 
     private static async Task SeedOffersAsync(ApplicationDbContext context, Guid mediaUserId)
@@ -123,7 +182,7 @@ public static class DbInitializer
         // 1. Online - Banner Leaderboard (CPT)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Prémiový banner Leaderboard na homepage",
             Format = "Leaderboard 970x250",
@@ -146,7 +205,7 @@ public static class DbInitializer
         // 2. Online - Advertorial (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Advertorial článok v sekcii Bydlenie",
             Format = "Advertorial 800x1200",
@@ -168,7 +227,7 @@ public static class DbInitializer
         // 3. Online - Last Minute (CPT)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Last Minute - Skyscraper banner",
             Format = "Skyscraper 160x600",
@@ -190,7 +249,7 @@ public static class DbInitializer
         // 4. Print - PR článek (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] PR článok v tlačenom časopise",
             Format = "PR článek A4",
@@ -213,7 +272,7 @@ public static class DbInitializer
         // 5. Rádio - Spot (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa5"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Rádiový spot v dopravnej špičke",
             Format = "30 sekúnd spot",
@@ -236,7 +295,7 @@ public static class DbInitializer
         // 6. OOH - Billboard (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa6"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Billboard na hlavnej ceste",
             Format = "Billboard 6x3m",
@@ -259,7 +318,7 @@ public static class DbInitializer
         // 7. Sociální sítě - Facebook/Instagram (CPT)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa7"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Facebook a Instagram Stories",
             Format = "Stories 1080x1920",
@@ -281,7 +340,7 @@ public static class DbInitializer
         // 8. Video - YouTube preroll (CPT)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa8"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] YouTube preroll reklama",
             Format = "Video preroll 15s",
@@ -303,7 +362,7 @@ public static class DbInitializer
         // 9. Influenceři - Instagram post (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa9"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Instagram post od lifestyle influencera",
             Format = "Instagram post + Stories",
@@ -325,7 +384,7 @@ public static class DbInitializer
         // 10. Online - Newsletter (CPT)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa10"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Banner v týždennom newsletteri",
             Format = "Newsletter banner 600x200",
@@ -346,7 +405,7 @@ public static class DbInitializer
         // 11. Print - Akce (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Akce - Dvojstrana v časopise",
             Format = "Dvojstrana A4",
@@ -369,7 +428,7 @@ public static class DbInitializer
         // 12. OOH - Last Minute (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa12"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Last Minute - Citylight panel",
             Format = "Citylight 175x118cm",
@@ -391,7 +450,7 @@ public static class DbInitializer
         // 13. Rádio - Akce (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa13"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Akce - Rádiový balíček",
             Format = "60 sekúnd spot",
@@ -413,7 +472,7 @@ public static class DbInitializer
         // 14. Sociální sítě - Akce (CPT)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa14"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Akce - Facebook feed reklama",
             Format = "Feed post 1200x628",
@@ -434,7 +493,7 @@ public static class DbInitializer
         // 15. Video - YouTube midroll (CPT)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa15"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] YouTube midroll reklama",
             Format = "Video midroll 30s",
@@ -455,7 +514,7 @@ public static class DbInitializer
         // 16. Influenceři - YouTube (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa16"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] YouTube spolupráca s tech influencerom",
             Format = "Dedicated video + mention",
@@ -477,7 +536,7 @@ public static class DbInitializer
         // 17. Online - Last Minute + Akce (CPT)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa17"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Last Minute + Akce - Display banner",
             Format = "Display banner 728x90",
@@ -499,7 +558,7 @@ public static class DbInitializer
         // 18. Print - Speciál (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa18"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Speciál - Obálka časopisu",
             Format = "Obálka časopisu A4",
@@ -521,7 +580,7 @@ public static class DbInitializer
         // 19. OOH - Speciál (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa19"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Speciál - Digitálny billboard",
             Format = "Digitálny billboard 5x3m",
@@ -544,7 +603,7 @@ public static class DbInitializer
         // 20. Rádio - Speciál (UnitPrice)
         offers.Add(new Offer
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa20"),
+            Id = Guid.NewGuid(), // Generuj unikátne ID pre každého používateľa
             MediaUserId = mediaUserId,
             Title = "[SEED] Speciál - Rádiový programový blok",
             Format = "Programový blok 5 minút",

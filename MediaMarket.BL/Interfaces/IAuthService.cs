@@ -8,8 +8,10 @@ public interface IAuthService
     object? GetCurrentUser();
     Task<object?> GetUserFromTokenAsync(string token);
     Task<bool> ValidateTokenAsync(string token);
+    Task<(string? AccessToken, string? RefreshToken, object? User)> RefreshTokenAsync(string refreshToken);
     Task<bool> UpdatePasswordAsync(string newPassword);
-    Task<bool> ResetPasswordAsync(string email);
+    Task<bool> UpdatePasswordWithTokenAsync(string accessToken, string newPassword);
+    Task<bool> ResetPasswordAsync(string email, string? redirectUrl = null);
     Task<bool> VerifyEmailAsync(string token, string type);
     Task<bool> ResendVerificationEmailAsync(string email);
 }

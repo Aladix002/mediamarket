@@ -150,7 +150,7 @@ const AddOffer = () => {
     } catch (error) {
       toast({
         title: 'Chyba',
-        description: error instanceof Error ? error.message : 'Nepodarilo sa vytvorit ponuku',
+        description: error instanceof Error ? error.message : 'Nepodařilo se vytvořit nabídku',
         variant: 'destructive',
       });
     } finally {

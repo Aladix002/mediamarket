@@ -12,21 +12,20 @@ import { useResendVerification } from '@/api/hooks';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { setRole, setUserId, setAccessToken } = useApp();
+  const { setRole, setUserId, setAccessToken, setRefreshToken } = useApp();
   const { resendVerification, loading: resending } = useResendVerification();
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
-    ico: '',
+    companyName: '',
     email: '',
     role: '',
     phone: '',
     password: '',
+    confirmPassword: '',
   });
-  const [loadingCompany, setLoadingCompany] = useState(false);
-  const [companyName, setCompanyName] = useState<string>('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,32 +46,10 @@ const RegisterPage = () => {
 
       // Validacia - skontroluj ci su vsetky povinne polia vyplnene
       if (!formData.email.trim() || !formData.password || 
-          !formData.name.trim() || !formData.phone.trim() || !formData.ico.trim()) {
+          !formData.name.trim() || !formData.phone.trim() || !formData.companyName.trim()) {
         toast({
           title: 'Chyba',
           description: 'Prosím vyplňte všechna povinná pole',
-          variant: 'destructive',
-        });
-        setSubmitting(false);
-        return;
-      }
-      
-      // Validacia - musi byt nacitany nazov firmy z ARES
-      if (!companyName.trim()) {
-        toast({
-          title: 'Chyba',
-          description: 'Prosím zadajte IČO a počkajte na načtení názvu firmy z ARES',
-          variant: 'destructive',
-        });
-        setSubmitting(false);
-        return;
-      }
-
-      // Validacia ICO - musi byt 8 cislic
-      if (!/^\d{8}$/.test(formData.ico.trim())) {
-        toast({
-          title: 'Chyba',
-          description: 'IČO musí obsahovat přesně 8 číslic',
           variant: 'destructive',
         });
         setSubmitting(false);
@@ -84,6 +61,30 @@ const RegisterPage = () => {
         toast({
           title: 'Chyba',
           description: 'Heslo musí mít minimálně 8 znaků',
+          variant: 'destructive',
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      // Validácia - heslo musí obsahovať aspoň jedno písmeno a aspoň jednu číslicu
+      const hasLetter = /[a-zA-Z]/.test(formData.password);
+      const hasDigit = /[0-9]/.test(formData.password);
+      if (!hasLetter || !hasDigit) {
+        toast({
+          title: 'Chyba',
+          description: 'Heslo musí obsahovat alespoň jedno písmeno a alespoň jednu číslici',
+          variant: 'destructive',
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      // Validacia potvrdenia hesla
+      if (formData.password !== formData.confirmPassword) {
+        toast({
+          title: 'Chyba',
+          description: 'Hesla se musí shodovat',
           variant: 'destructive',
         });
         setSubmitting(false);
@@ -109,10 +110,10 @@ const RegisterPage = () => {
       const requestBody = {
         email: formData.email.trim(),
         password: formData.password,
-        companyName: undefined, // Názov firmy sa získa automaticky z ARES na backende
+        confirmPassword: formData.confirmPassword,
+        companyName: formData.companyName.trim(),
         contactName: formData.name.trim(),
         phone: formData.phone.trim(),
-        ico: formData.ico.trim(),
         role: roleValue,
       };
 
@@ -120,25 +121,53 @@ const RegisterPage = () => {
         requestBody,
       });
 
-      if (response.success && response.accessToken) {
-        // Uloz token a user ID
-        setAccessToken(response.accessToken);
-        if (response.userId) {
-          setUserId(response.userId.toString());
-        }
-        
-        // Nastav rolu v contextu
-        setRole(formData.role as 'agency' | 'media');
-        
-        // Uloz email pre resend verification
-        setRegisteredEmail(formData.email);
-        
-        toast({
-          title: 'Úspěch',
-          description: response.message || 'Registrace byla úspěšná. Ověřte si email.',
-        });
+      if (response.success) {
+        // Ak máme access token, automaticky prihlásime používateľa
+        if (response.accessToken) {
+          setAccessToken(response.accessToken);
+          if (response.refreshToken) {
+            setRefreshToken(response.refreshToken);
+          }
+          if (response.userId) {
+            setUserId(response.userId.toString());
+          }
+          
+          // Nastav rolu v contextu
+          setRole(formData.role as 'agency' | 'media');
+          
+          toast({
+            title: 'Úspěch',
+            description: 'Registrace byla úspěšná. Jste přihlášeni.',
+          });
 
-        setSubmitted(true);
+          // Presmeruj podľa role
+          if (formData.role === 'agency') {
+            navigate('/agency');
+          } else if (formData.role === 'media') {
+            navigate('/media');
+          } else {
+            navigate('/');
+          }
+        } else {
+          // Ak nie je access token (email musí byť overený), zobraz success screen
+          setAccessToken(null);
+          if (response.userId) {
+            setUserId(response.userId.toString());
+          }
+          
+          // Nastav rolu v contextu
+          setRole(formData.role as 'agency' | 'media');
+          
+          // Uloz email pre resend verification
+          setRegisteredEmail(formData.email);
+          
+          toast({
+            title: 'Úspěch',
+            description: response.message || 'Registrace byla úspěšná. Ověřte si email.',
+          });
+
+          setSubmitted(true);
+        }
       } else {
         toast({
           title: 'Chyba',
@@ -321,59 +350,14 @@ const RegisterPage = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ico">IČO</Label>
+            <Label htmlFor="companyName">Názov firmy</Label>
             <Input
-              id="ico"
-              placeholder="12345678"
-              value={formData.ico}
-              onChange={async (e) => {
-                const newIco = e.target.value.replace(/\D/g, '');
-                setFormData({ ...formData, ico: newIco });
-                setCompanyName(''); // Reset názvu firmy pri zmene IČO
-                
-                // Automaticky načítaj názov firmy z ARES ak je IČO platné
-                if (newIco.length === 8 && /^\d{8}$/.test(newIco)) {
-                  setLoadingCompany(true);
-                  try {
-                    const response = await fetch(`http://localhost:5234/api/ares/company/${newIco}`);
-                    if (response.ok) {
-                      const data = await response.json();
-                      if (data.companyName) {
-                        setCompanyName(data.companyName);
-                      }
-                    } else {
-                      const errorData = await response.json().catch(() => ({}));
-                      toast({
-                        title: 'Chyba',
-                        description: errorData.error || 'Nepodarilo sa získať údaje z ARES',
-                        variant: 'destructive',
-                      });
-                    }
-                  } catch (error) {
-                    // Ignore network errors - názov firmy sa získa pri registrácii
-                  } finally {
-                    setLoadingCompany(false);
-                  }
-                }
-              }}
-              maxLength={8}
+              id="companyName"
+              placeholder="Název společnosti"
+              value={formData.companyName}
+              onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              IČO musí obsahovat přesně 8 číslic
-            </p>
-            {loadingCompany && (
-              <p className="text-xs text-muted-foreground flex items-center gap-2">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Načítám údaje z ARES...
-              </p>
-            )}
-            {companyName && !loadingCompany && (
-              <div className="p-2 bg-muted rounded-md">
-                <p className="text-sm font-medium">Název firmy z ARES:</p>
-                <p className="text-sm text-muted-foreground">{companyName}</p>
-              </div>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -415,9 +399,6 @@ const RegisterPage = () => {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              Emailová doména musí odpovídat doméně firmy v ARES registru
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -428,6 +409,22 @@ const RegisterPage = () => {
               placeholder="Minimálně 8 znaků"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+              minLength={8}
+            />
+            <p className="text-xs text-muted-foreground">
+              Heslo musí obsahovat minimálně 8 znaků, alespoň jedno písmeno a alespoň jednu číslici
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Potvrdenie hesla</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="Zopakujte heslo"
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               required
               minLength={8}
             />

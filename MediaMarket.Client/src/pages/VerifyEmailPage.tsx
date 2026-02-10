@@ -18,30 +18,74 @@ const VerifyEmailPage = () => {
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    // Skus ziskat token z URL parametrov
-    const tokenParam = searchParams.get('token');
-    const emailParam = searchParams.get('email');
-    const typeParam = searchParams.get('type') || 'signup';
+    // Supabase používa token_hash v URL alebo access_token v hash fragmente
+    // Ak je access_token v hash, email je už overený a používateľ je prihlásený
+    const hash = window.location.hash;
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const tokenHash = hashParams.get('token_hash');
+      const hashType = hashParams.get('type') || 'signup';
+      const hashEmail = hashParams.get('email');
+      
+      // Ak je access_token, email je už overený - len aktualizujme DB
+      if (accessToken) {
+        // Email je už overený v Supabase, len potvrdíme
+        handleVerify(accessToken, hashType, true);
+      } else if (tokenHash) {
+        // Máme token_hash, musíme overiť
+        setToken(tokenHash);
+        handleVerify(tokenHash, hashType);
+      }
+      
+      if (hashEmail) {
+        setEmail(hashEmail);
+      }
+    } else {
+      // Skús získať z query parametrov
+      const tokenHashParam = searchParams.get('token_hash');
+      const tokenParam = searchParams.get('token') || tokenHashParam;
+      const emailParam = searchParams.get('email');
+      const typeParam = searchParams.get('type') || 'signup';
 
-    if (tokenParam) {
-      setToken(tokenParam);
-      handleVerify(tokenParam, typeParam);
-    }
+      if (tokenParam) {
+        setToken(tokenParam);
+        handleVerify(tokenParam, typeParam);
+      }
 
-    if (emailParam) {
-      setEmail(emailParam);
+      if (emailParam) {
+        setEmail(emailParam);
+      }
     }
   }, [searchParams]);
 
-  const handleVerify = async (verifyToken: string, type: string = 'signup') => {
+  const handleVerify = async (verifyToken: string, type: string = 'signup', alreadyVerified: boolean = false) => {
     try {
       setError('');
-      const response = await verifyEmail(verifyToken, type);
-      if (response.success) {
-        setVerified(true);
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
+      
+      if (alreadyVerified) {
+        // Email je už overený v Supabase (access_token v hash)
+        // Len potvrdíme na backende
+        const response = await verifyEmail(verifyToken, type);
+        if (response.success) {
+          setVerified(true);
+          toast({
+            title: 'Úspěch',
+            description: 'Email byl úspěšně ověřen',
+          });
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        }
+      } else {
+        // Musíme overiť token
+        const response = await verifyEmail(verifyToken, type);
+        if (response.success) {
+          setVerified(true);
+          setTimeout(() => {
+            navigate('/login');
+          }, 3000);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Nepodařilo se ověřit email');

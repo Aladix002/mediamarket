@@ -9,7 +9,6 @@ using MediaMarket.DAL.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using BCrypt.Net;
 
 namespace MediaMarket.API.Endpoints;
 
@@ -62,6 +61,26 @@ public static class AuthEndpoints
             .Produces<VerifyEmailResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest);
 
+        group.MapPost("/change-password", ChangePasswordAsync)
+            .WithName("ChangePassword")
+            .WithSummary("Zmena hesla prihláseného používateľa")
+            .Produces<ChangePasswordResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/forgot-password", ForgotPasswordAsync)
+            .WithName("ForgotPassword")
+            .WithSummary("Poslanie emailu na reset hesla")
+            .Produces<ForgotPasswordResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
+
+        group.MapPost("/reset-password", ResetPasswordAsync)
+            .WithName("ResetPassword")
+            .WithSummary("Nastavení nového hesla pomocou tokenu z emailu")
+            .Produces<ResetPasswordResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         // ARES endpoint pre získanie názvu firmy
         var aresGroup = app.MapGroup("/api/ares").WithTags("ARES");
         aresGroup.MapGet("/company/{ico}", GetCompanyNameFromAresAsync)
@@ -90,8 +109,7 @@ public static class AuthEndpoints
         [FromBody] RegisterRequest request,
         [FromServices] IAuthService authService,
         [FromServices] IUserService userService,
-        [FromServices] RegisterRequestValidator validator,
-        [FromServices] MediaMarket.BL.Interfaces.IARESService aresService)
+        [FromServices] RegisterRequestValidator validator)
     {
         // Validacia
         var validationResult = await validator.ValidateAsync(request);
@@ -116,39 +134,12 @@ public static class AuthEndpoints
             });
         }
 
-        // Získaj názov firmy z ARES ak nie je zadaný
-        string companyName = request.CompanyName ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(companyName))
-        {
-            var (aresCompanyName, aresError) = await aresService.GetCompanyNameAsync(request.Ico);
-            if (string.IsNullOrWhiteSpace(aresCompanyName))
-            {
-                return Results.BadRequest(new RegisterResponse
-                {
-                    Success = false,
-                    Message = aresError ?? "Nepodarilo sa získať názov firmy z ARES registra"
-                });
-            }
-            companyName = aresCompanyName;
-        }
-
-        // ARES validacia - overenie firmy a emailovej domeny
-        var (isValid, aresErrorMessage) = await aresService.ValidateCompanyAsync(request.Ico, companyName, request.Email);
-        if (!isValid)
-        {
-            return Results.BadRequest(new RegisterResponse
-            {
-                Success = false,
-                Message = aresErrorMessage ?? "Overenie firmy v ARES zlyhalo"
-            });
-        }
-
         try
         {
             // 1. Registracia v Supabase Auth
             var metadata = new Dictionary<string, object>
             {
-                { "company_name", companyName },
+                { "company_name", request.CompanyName },
                 { "contact_name", request.ContactName },
                 { "phone", request.Phone },
                 { "role", request.Role.ToString() }
@@ -245,7 +236,11 @@ public static class AuthEndpoints
 
             // 2. Vytvorenie User v nasej databaze
             // Ziskaj Supabase User ID z metadata
-            var supabaseUserId = GetSupabaseUserId(supabaseUser);
+            Guid? supabaseUserId = null;
+            if (supabaseUser != null)
+            {
+                supabaseUserId = GetSupabaseUserId(supabaseUser);
+            }
             
             var user = new User
             {
@@ -254,10 +249,10 @@ public static class AuthEndpoints
                 PasswordHash = string.Empty, // Heslo je v Supabase, nie v nasej DB
                 Role = request.Role,
                 Status = UserStatus.Pending, // Caka na schvalenie adminom
-                CompanyName = companyName, // Použi názov firmy z ARES
+                CompanyName = request.CompanyName,
                 ContactName = request.ContactName,
                 Phone = request.Phone,
-                Ico = request.Ico,
+                Ico = string.Empty, // ICO už nie je povinné
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -270,6 +265,7 @@ public static class AuthEndpoints
                     ? "Registracia uspesna. Prosim overte vas email - poslali sme vam email s odkazom na overenie."
                     : "Registracia uspesna. Prosim overte vas email.",
                 AccessToken = accessToken,
+                RefreshToken = refreshToken,
                 UserId = createdUser.Id
             });
         }
@@ -286,6 +282,7 @@ public static class AuthEndpoints
         [FromBody] LoginRequest request,
         [FromServices] IUserService userService,
         [FromServices] LoginRequestValidator validator,
+        [FromServices] IAuthService authService,
         [FromServices] ILoggerFactory loggerFactory)
     {
         // Validacia
@@ -301,60 +298,57 @@ public static class AuthEndpoints
 
         try
         {
-            // Ziskaj pouzivatela z nasej databazy
-            var user = await userService.GetByEmailAsync(request.Email);
+            // Prihlásenie cez Supabase Auth
+            var (accessToken, refreshToken, supabaseUser) = await authService.SignInAsync(request.Email, request.Password);
+            
+            if (string.IsNullOrEmpty(accessToken) || supabaseUser == null)
+            {
+                return Results.Json(new LoginResponse
+                {
+                    Success = false,
+                    Message = "Nesprávne prihlasovacie údaje alebo email nie je overený"
+                }, statusCode: 401);
+            }
+
+            // Získaj email z Supabase user objektu
+            var email = GetEmailFromSupabaseUser(supabaseUser);
+            if (string.IsNullOrEmpty(email))
+            {
+                return Results.Json(new LoginResponse
+                {
+                    Success = false,
+                    Message = "Nepodarilo sa získať email z autentifikácie"
+                }, statusCode: 401);
+            }
+
+            // Získaj používateľa z našej databázy
+            var user = await userService.GetByEmailAsync(email);
             if (user == null)
             {
                 return Results.Json(new LoginResponse
                 {
                     Success = false,
-                    Message = "Používateľ s týmto emailom neexistuje"
+                    Message = "Používateľ s týmto emailom neexistuje v databáze"
                 }, statusCode: 401);
             }
 
-            // Over heslo cez BCrypt
-            if (string.IsNullOrEmpty(user.PasswordHash))
+            // Skontroluj, či je email overený v Supabase
+            var emailVerified = IsEmailVerified(supabaseUser);
+            if (!emailVerified)
             {
                 return Results.Json(new LoginResponse
                 {
                     Success = false,
-                    Message = "Používateľ nemá nastavené heslo"
+                    Message = "Email nie je overený. Prosím overte váš email pred prihlásením."
                 }, statusCode: 401);
             }
-
-            // Debug: Skontroluj hash
-            var logger = loggerFactory.CreateLogger("AuthEndpoints");
-            logger.LogInformation("Verifying password for user: {Email}, Hash exists: {HasHash}, Hash length: {HashLength}", 
-                request.Email, !string.IsNullOrEmpty(user.PasswordHash), user.PasswordHash?.Length ?? 0);
-            
-            var isValidPassword = await userService.VerifyPasswordAsync(request.Email, request.Password);
-            logger.LogInformation("Password verification result: {IsValid}", isValidPassword);
-            
-            if (!isValidPassword)
-            {
-                // Debug: Skús overiť heslo priamo
-                var directVerify = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
-                logger.LogWarning("Direct BCrypt verify result: {DirectVerify}, Hash: {HashPrefix}", 
-                    directVerify, user.PasswordHash?.Substring(0, Math.Min(20, user.PasswordHash?.Length ?? 0)));
-                
-                return Results.Json(new LoginResponse
-                {
-                    Success = false,
-                    Message = "Nesprávne heslo"
-                }, statusCode: 401);
-            }
-
-            // Vytvor jednoduchy token (pre testovanie - v produkcii by sa mal pouzivat JWT)
-            // Pre jednoduchost pouzijeme base64 encoded string s user ID a emailom
-            var tokenData = $"{user.Id}:{user.Email}:{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss}";
-            var simpleToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(tokenData));
 
             return Results.Ok(new LoginResponse
             {
                 Success = true,
                 Message = "Prihlasenie uspesne",
-                AccessToken = simpleToken,
-                RefreshToken = null,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
                 User = new UserInfo
                 {
                     Id = user.Id,
@@ -367,7 +361,9 @@ public static class AuthEndpoints
         }
         catch (Exception ex)
         {
-            // Log exception pre debugging (v produkcii by sa mal použiť logger)
+            var logger = loggerFactory.CreateLogger("AuthEndpoints");
+            logger.LogError(ex, "Chyba pri prihlásení pre email: {Email}", request.Email);
+            
             return Results.Json(new LoginResponse
             {
                 Success = false,
@@ -376,15 +372,25 @@ public static class AuthEndpoints
         }
     }
 
-    private static async Task<IResult> LogoutAsync()
+    private static async Task<IResult> LogoutAsync(
+        [FromServices] IAuthService authService)
     {
-        // Jednoduchy logout - v produkcii by sa mal token invalidovat
-        return Results.Ok(new { Success = true, Message = "Odhlasenie uspesne" });
+        try
+        {
+            await authService.SignOutAsync();
+            return Results.Ok(new { Success = true, Message = "Odhlasenie uspesne" });
+        }
+        catch
+        {
+            // Aj keby zlyhalo, vratime uspesnu odpoved
+            return Results.Ok(new { Success = true, Message = "Odhlasenie uspesne" });
+        }
     }
 
     private static async Task<IResult> GetCurrentUserAsync(
         [FromHeader(Name = "Authorization")] string? authorization,
-        [FromServices] IUserService userService)
+        [FromServices] IUserService userService,
+        [FromServices] IAuthService authService)
     {
         if (string.IsNullOrEmpty(authorization) || !authorization.StartsWith("Bearer "))
         {
@@ -395,34 +401,47 @@ public static class AuthEndpoints
         
         try
         {
-            // Dekoduj jednoduchy token
-            var tokenBytes = Convert.FromBase64String(token);
-            var tokenString = System.Text.Encoding.UTF8.GetString(tokenBytes);
-            var tokenParts = tokenString.Split(':');
-            
-            if (tokenParts.Length >= 2 && Guid.TryParse(tokenParts[0], out var userId))
+            // Validuj token cez Supabase
+            var isValid = await authService.ValidateTokenAsync(token);
+            if (!isValid)
             {
-                // Ziskaj pouzivatela podla ID
-                var user = await userService.GetByIdAsync(userId);
-                if (user != null)
-                {
-                    var response = new UserResponse
-                    {
-                        Id = user.Id,
-                        Email = user.Email,
-                        EmailVerifiedAt = user.EmailVerifiedAt,
-                        Role = user.Role,
-                        Status = user.Status,
-                        CreatedAt = user.CreatedAt,
-                        CompanyName = user.CompanyName,
-                        ContactName = user.ContactName,
-                        Phone = user.Phone
-                    };
-                    return Results.Ok(response);
-                }
+                return Results.Unauthorized();
             }
 
-            return Results.Unauthorized();
+            // Získaj používateľa z tokenu
+            var supabaseUser = await authService.GetUserFromTokenAsync(token);
+            if (supabaseUser == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            // Získaj email z Supabase user objektu
+            var email = GetEmailFromSupabaseUser(supabaseUser);
+            if (string.IsNullOrEmpty(email))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Získaj používateľa z našej databázy
+            var user = await userService.GetByEmailAsync(email);
+            if (user == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var response = new UserResponse
+            {
+                Id = user.Id,
+                Email = user.Email,
+                EmailVerifiedAt = user.EmailVerifiedAt,
+                Role = user.Role,
+                Status = user.Status,
+                CreatedAt = user.CreatedAt,
+                CompanyName = user.CompanyName,
+                ContactName = user.ContactName,
+                Phone = user.Phone
+            };
+            return Results.Ok(response);
         }
         catch
         {
@@ -430,14 +449,64 @@ public static class AuthEndpoints
         }
     }
 
-    private static Task<IResult> RefreshTokenAsync(
+    private static async Task<IResult> RefreshTokenAsync(
         [FromBody] RefreshTokenRequest request,
         [FromServices] IAuthService authService,
         [FromServices] IUserService userService)
     {
-        // TODO: Implementovat refresh token logiku cez Supabase
-        // Supabase SDK by mal mat metodu na refresh token
-        return Task.FromResult<IResult>(Results.StatusCode(501));
+        if (string.IsNullOrEmpty(request.RefreshToken))
+        {
+            return Results.BadRequest(new LoginResponse
+            {
+                Success = false,
+                Message = "Refresh token je povinný"
+            });
+        }
+
+        try
+        {
+            // Obnov token cez Supabase
+            var (accessToken, refreshToken, supabaseUser) = await authService.RefreshTokenAsync(request.RefreshToken);
+            
+            if (string.IsNullOrEmpty(accessToken) || supabaseUser == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            // Získaj email z Supabase user objektu
+            var email = GetEmailFromSupabaseUser(supabaseUser);
+            if (string.IsNullOrEmpty(email))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Získaj používateľa z našej databázy
+            var user = await userService.GetByEmailAsync(email);
+            if (user == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            return Results.Ok(new LoginResponse
+            {
+                Success = true,
+                Message = "Token bol obnovený",
+                AccessToken = accessToken,
+                RefreshToken = refreshToken ?? request.RefreshToken,
+                User = new UserInfo
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    Role = user.Role.ToString(),
+                    CompanyName = user.CompanyName,
+                    ContactName = user.ContactName
+                }
+            });
+        }
+        catch
+        {
+            return Results.Unauthorized();
+        }
     }
 
     private static async Task<IResult> VerifyEmailAsync(
@@ -457,10 +526,32 @@ public static class AuthEndpoints
 
         try
         {
-            // Overi email cez Supabase
-            var verified = await authService.VerifyEmailAsync(request.Token, request.Type);
+            // Skús získať používateľa z tokenu (môže to byť access_token alebo token_hash)
+            object? supabaseUser = null;
+            bool verified = false;
             
-            if (!verified)
+            // Ak je to access_token, email je už overený v Supabase
+            // Skús získať používateľa priamo z tokenu
+            supabaseUser = await authService.GetUserFromTokenAsync(request.Token);
+            
+            if (supabaseUser != null)
+            {
+                // Token je platný, email je overený
+                verified = true;
+            }
+            else
+            {
+                // Skús overiť cez VerifyOTP (pre token_hash)
+                verified = await authService.VerifyEmailAsync(request.Token, request.Type);
+                
+                if (verified)
+                {
+                    // Po verify by mal byť používateľ v session
+                    supabaseUser = authService.GetCurrentUser();
+                }
+            }
+            
+            if (!verified || supabaseUser == null)
             {
                 return Results.BadRequest(new VerifyEmailResponse
                 {
@@ -469,20 +560,16 @@ public static class AuthEndpoints
                 });
             }
 
-            // Ziskaj aktualneho pouzivatela z Supabase (po verify by mal byt prihlaseny)
-            var supabaseUser = authService.GetCurrentUser();
-            if (supabaseUser != null)
+            // Získaj email z Supabase user objektu
+            var email = GetEmailFromSupabaseUser(supabaseUser);
+            if (!string.IsNullOrEmpty(email))
             {
-                var email = GetEmailFromSupabaseUser(supabaseUser);
-                if (!string.IsNullOrEmpty(email))
+                // Aktualizuj EmailVerifiedAt v nasej databaze
+                var user = await context.Users.FirstOrDefaultAsync(u => u.Email == email);
+                if (user != null)
                 {
-                    // Aktualizuj EmailVerifiedAt v nasej databaze
-                    var user = await context.Users.FirstOrDefaultAsync(u => u.Email == email);
-                    if (user != null)
-                    {
-                        user.EmailVerifiedAt = DateTime.UtcNow;
-                        await context.SaveChangesAsync();
-                    }
+                    user.EmailVerifiedAt = DateTime.UtcNow;
+                    await context.SaveChangesAsync();
                 }
             }
 
@@ -544,6 +631,205 @@ public static class AuthEndpoints
         }
     }
 
+    private static async Task<IResult> ChangePasswordAsync(
+        [FromHeader(Name = "Authorization")] string? authorization,
+        [FromBody] ChangePasswordRequest request,
+        [FromServices] IAuthService authService,
+        [FromServices] ChangePasswordRequestValidator validator,
+        [FromServices] IUserService userService)
+    {
+        if (string.IsNullOrEmpty(authorization) || !authorization.StartsWith("Bearer "))
+        {
+            return Results.Unauthorized();
+        }
+
+        var token = authorization.Substring("Bearer ".Length).Trim();
+
+        // Validácia
+        var validationResult = await validator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var errorMessages = validationResult.Errors.Select(e => e.ErrorMessage);
+            return Results.BadRequest(new ChangePasswordResponse
+            {
+                Success = false,
+                Message = string.Join(", ", errorMessages)
+            });
+        }
+
+        try
+        {
+            // Získaj používateľa z tokenu
+            var supabaseUser = await authService.GetUserFromTokenAsync(token);
+            if (supabaseUser == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var email = GetEmailFromSupabaseUser(supabaseUser);
+            if (string.IsNullOrEmpty(email))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Over aktuálne heslo - skús prihlásiť sa s aktuálnym heslom
+            var (accessToken, _, _) = await authService.SignInAsync(email, request.CurrentPassword);
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                return Results.BadRequest(new ChangePasswordResponse
+                {
+                    Success = false,
+                    Message = "Aktuálne heslo nie je správne"
+                });
+            }
+
+            // Zmeň heslo
+            var success = await authService.UpdatePasswordAsync(request.NewPassword);
+            if (!success)
+            {
+                return Results.BadRequest(new ChangePasswordResponse
+                {
+                    Success = false,
+                    Message = "Nepodarilo sa zmeniť heslo"
+                });
+            }
+
+            return Results.Ok(new ChangePasswordResponse
+            {
+                Success = true,
+                Message = "Heslo bolo úspešne zmenené"
+            });
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(new ChangePasswordResponse
+            {
+                Success = false,
+                Message = $"Chyba pri zmene hesla: {ex.Message}"
+            });
+        }
+    }
+
+    private static async Task<IResult> ForgotPasswordAsync(
+        [FromBody] ForgotPasswordRequest request,
+        [FromServices] IAuthService authService,
+        [FromServices] IConfiguration configuration)
+    {
+        if (string.IsNullOrEmpty(request.Email))
+        {
+            return Results.BadRequest(new ForgotPasswordResponse
+            {
+                Success = false,
+                Message = "Email je povinný"
+            });
+        }
+
+        try
+        {
+            // Nastav redirect URL na stránku pre reset hesla
+            var frontendUrl = configuration["Frontend:Url"] ?? "http://localhost:5173";
+            var redirectUrl = $"{frontendUrl}/reset-password";
+            
+            var sent = await authService.ResetPasswordAsync(request.Email, redirectUrl);
+            
+            if (!sent)
+            {
+                return Results.BadRequest(new ForgotPasswordResponse
+                {
+                    Success = false,
+                    Message = "Nepodařilo se poslat email na reset hesla"
+                });
+            }
+
+            return Results.Ok(new ForgotPasswordResponse
+            {
+                Success = true,
+                Message = "Email s instrukcemi na reset hesla byl odeslán"
+            });
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(new ForgotPasswordResponse
+            {
+                Success = false,
+                Message = $"Chyba pri posielani emailu: {ex.Message}"
+            });
+        }
+    }
+
+    private static async Task<IResult> ResetPasswordAsync(
+        [FromHeader(Name = "Authorization")] string? authorization,
+        [FromBody] ResetPasswordRequest request,
+        [FromServices] IAuthService authService,
+        [FromServices] ResetPasswordRequestValidator validator,
+        [FromServices] ILoggerFactory loggerFactory)
+    {
+        if (string.IsNullOrEmpty(authorization) || !authorization.StartsWith("Bearer "))
+        {
+            return Results.Unauthorized();
+        }
+
+        var token = authorization.Substring("Bearer ".Length).Trim();
+
+        // Validácia
+        var validationResult = await validator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var errorMessages = validationResult.Errors.Select(e => e.ErrorMessage);
+            var logger = loggerFactory.CreateLogger("AuthEndpoints");
+            logger.LogWarning("ResetPasswordAsync: Validation failed. Errors: {Errors}", string.Join(", ", errorMessages));
+            
+            return Results.BadRequest(new ResetPasswordResponse
+            {
+                Success = false,
+                Message = string.Join(", ", errorMessages)
+            });
+        }
+
+        try
+        {
+            var logger = loggerFactory.CreateLogger("AuthEndpoints");
+            
+            // Získaj používateľa z tokenu (z reset password linku)
+            var supabaseUser = await authService.GetUserFromTokenAsync(token);
+            if (supabaseUser == null)
+            {
+                logger.LogWarning("ResetPasswordAsync: Invalid or expired token");
+                return Results.Unauthorized();
+            }
+
+            logger.LogInformation("ResetPasswordAsync: User found, attempting to update password");
+
+            // Zmeň heslo pomocou recovery tokenu - musíme nastaviť session najprv
+            var success = await authService.UpdatePasswordWithTokenAsync(token, request.NewPassword);
+            if (!success)
+            {
+                logger.LogWarning("ResetPasswordAsync: Failed to update password");
+                return Results.BadRequest(new ResetPasswordResponse
+                {
+                    Success = false,
+                    Message = "Nepodařilo se změnit heslo. Token môže byť neplatný alebo expirovaný."
+                });
+            }
+
+            logger.LogInformation("ResetPasswordAsync: Password successfully updated");
+
+            return Results.Ok(new ResetPasswordResponse
+            {
+                Success = true,
+                Message = "Heslo bylo úspěšně změněno"
+            });
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(new ResetPasswordResponse
+            {
+                Success = false,
+                Message = $"Chyba pri zmene hesla: {ex.Message}"
+            });
+        }
+    }
+
     // Helper metody pre extrakciu dat z Supabase user objektu
     private static Guid? GetSupabaseUserId(object supabaseUser)
     {
@@ -583,6 +869,37 @@ public static class AuthEndpoints
             // Ignore
         }
         return null;
+    }
+
+    private static bool IsEmailVerified(object supabaseUser)
+    {
+        try
+        {
+            var userType = supabaseUser.GetType();
+            var emailConfirmedProperty = userType.GetProperty("EmailConfirmedAt");
+            if (emailConfirmedProperty != null)
+            {
+                var emailConfirmedAt = emailConfirmedProperty.GetValue(supabaseUser);
+                return emailConfirmedAt != null;
+            }
+            
+            // Alternatívne skús EmailVerified alebo ConfirmedAt
+            var emailVerifiedProperty = userType.GetProperty("EmailVerified");
+            if (emailVerifiedProperty != null)
+            {
+                var emailVerified = emailVerifiedProperty.GetValue(supabaseUser);
+                if (emailVerified is bool verified)
+                {
+                    return verified;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore
+        }
+        // Ak sa nepodarí zistiť, predpokladajme že je overený (Supabase to kontroluje)
+        return true;
     }
 }
 

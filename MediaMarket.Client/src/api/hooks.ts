@@ -107,7 +107,7 @@ export function useOffers(filters?: {
       const mappedOffers = data.map(mapOfferResponseToOffer);
       setOffers(mappedOffers);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Nepodarilo sa nacitat ponuky');
+      const error = err instanceof Error ? err : new Error('Nepodařilo se načíst nabídky');
       setError(error);
       toast({
         title: 'Chyba',
@@ -161,7 +161,7 @@ export function useOffer(id: string | undefined) {
         const mappedOffer = mapOfferResponseToOffer(response);
         setOffer(mappedOffer);
       } catch (err) {
-        const error = err instanceof Error ? err : new Error('Nepodarilo sa nacitat ponuku');
+        const error = err instanceof Error ? err : new Error('Nepodařilo se načíst nabídku');
         setError(error);
         toast({
           title: 'Chyba',
@@ -209,7 +209,7 @@ export function useOrders(filters?: {
       const mappedOrders = response.map(mapOrderResponseToOrder);
       setOrders(mappedOrders);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Nepodarilo sa nacitat objednavky');
+      const error = err instanceof Error ? err : new Error('Nepodařilo se načíst objednávky');
       setError(error);
       toast({
         title: 'Chyba',
@@ -269,7 +269,7 @@ export function useCreateOrder() {
 
       return mapOrderResponseToOrder(response);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Nepodarilo sa vytvorit objednavku');
+      const error = err instanceof Error ? err : new Error('Nepodařilo se vytvořit objednávku');
       setError(error);
       toast({
         title: 'Chyba',
@@ -314,7 +314,7 @@ export function useUpdateOrderStatus() {
         description: 'Status objednávky bol aktualizovaný',
       });
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Nepodarilo sa aktualizovat status');
+      const error = err instanceof Error ? err : new Error('Nepodařilo se aktualizovat status');
       setError(error);
       toast({
         title: 'Chyba',
@@ -355,7 +355,7 @@ export function useRegister() {
 
       return response;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Nepodarilo sa zaregistrovat');
+      const error = err instanceof Error ? err : new Error('Nepodařilo se zaregistrovat');
       setError(error);
       throw error;
     } finally {

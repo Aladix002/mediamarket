@@ -14,14 +14,19 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .EmailAddress().WithMessage("Neplatny format emailu")
             .MaximumLength(255).WithMessage("Email moze mat maximalne 255 znakov");
 
-        RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Heslo je povinne")
-            .MinimumLength(8).WithMessage("Heslo musi mat minimalne 8 znakov")
-            .MaximumLength(100).WithMessage("Heslo moze mat maximalne 100 znakov");
+                RuleFor(x => x.Password)
+                    .NotEmpty().WithMessage("Heslo je povinne")
+                    .MinimumLength(8).WithMessage("Heslo musi mat minimalne 8 znakov")
+                    .MaximumLength(100).WithMessage("Heslo moze mat maximalne 100 znakov")
+                    .Must(BeValidPassword).WithMessage("Heslo musi obsahovat aspon jedno pismeno a aspon jednu cislicu");
+
+        RuleFor(x => x.ConfirmPassword)
+            .NotEmpty().WithMessage("Potvrdenie hesla je povinne")
+            .Equal(x => x.Password).WithMessage("Heslá sa musia zhodovať");
 
         RuleFor(x => x.CompanyName)
-            .MaximumLength(255).WithMessage("Nazov spolocnosti moze mat maximalne 255 znakov")
-            .When(x => !string.IsNullOrWhiteSpace(x.CompanyName)); // Voliteľné - ak nie je zadané, získa sa z ARES
+            .NotEmpty().WithMessage("Názov firmy je povinný")
+            .MaximumLength(255).WithMessage("Nazov spolocnosti moze mat maximalne 255 znakov");
 
         RuleFor(x => x.ContactName)
             .NotEmpty().WithMessage("Kontaktna osoba je povinna")
@@ -36,21 +41,6 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .IsInEnum().WithMessage("Neplatna rola")
             .Must(role => role == UserRole.Agency || role == UserRole.Media)
             .WithMessage("Rola musi byt Agency alebo Media");
-
-        RuleFor(x => x.Ico)
-            .NotEmpty().WithMessage("IČO je povinné")
-            .Must(BeValidIco).WithMessage("IČO musí obsahovať presne 8 číslic");
-    }
-
-    private static bool BeValidIco(string? ico)
-    {
-        if (string.IsNullOrWhiteSpace(ico))
-        {
-            return false;
-        }
-
-        // IČO musí obsahovať presne 8 číslic
-        return System.Text.RegularExpressions.Regex.IsMatch(ico, @"^\d{8}$");
     }
 
     private static bool BeValidPhone(string? phone)
@@ -63,5 +53,17 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
         // Jednoducha validacia - telefon moze obsahovat cisla, medzery, +, -, ()
         var phoneRegex = new Regex(@"^[\d\s\+\-\(\)]+$");
         return phoneRegex.IsMatch(phone);
+    }
+
+    private static bool BeValidPassword(string? password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+            return false;
+
+        // Musí obsahovať aspoň jedno písmeno a aspoň jednu číslicu
+        var hasLetter = password.Any(char.IsLetter);
+        var hasDigit = password.Any(char.IsDigit);
+        
+        return hasLetter && hasDigit;
     }
 }

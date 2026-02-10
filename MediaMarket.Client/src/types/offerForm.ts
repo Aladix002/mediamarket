@@ -56,7 +56,7 @@ export const offerSchema = z.object({
     return data.cpt && parseFloat(data.cpt) > 0;
   }
 }, {
-  message: 'Musíte vyplnit cenu podľa vybraného typu',
+  message: 'Musíte vyplnit cenu podle vybraného typu',
   path: ['pricePerUnit'],
 }).refine((data) => {
   if (!data.deadline || data.deadline.trim() === '') return true;

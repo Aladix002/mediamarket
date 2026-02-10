@@ -71,7 +71,11 @@ if (!string.IsNullOrEmpty(supabaseUrl) && !string.IsNullOrEmpty(supabaseKey))
         AutoRefreshToken = true,
         AutoConnectRealtime = false
     }));
-    builder.Services.AddScoped<IAuthService, SupabaseAuthService>();
+    builder.Services.AddScoped<IAuthService>(provider => 
+    {
+        var supabaseClient = provider.GetRequiredService<Supabase.Client>();
+        return new SupabaseAuthService(supabaseClient, supabaseUrl, supabaseKey);
+    });
 }
 
 // Email Service (Resend)
@@ -93,6 +97,8 @@ if (!string.IsNullOrEmpty(resendApiKey))
 // Validators
 builder.Services.AddScoped<MediaMarket.API.Validators.RegisterRequestValidator>();
 builder.Services.AddScoped<MediaMarket.API.Validators.LoginRequestValidator>();
+builder.Services.AddScoped<MediaMarket.API.Validators.ChangePasswordRequestValidator>();
+builder.Services.AddScoped<MediaMarket.API.Validators.ResetPasswordRequestValidator>();
 builder.Services.AddScoped<MediaMarket.API.Validators.Users.CreateUserRequestValidator>();
 builder.Services.AddScoped<MediaMarket.API.Validators.Users.UpdateUserRequestValidator>();
 builder.Services.AddScoped<MediaMarket.API.Validators.Offers.CreateOfferRequestValidator>();
