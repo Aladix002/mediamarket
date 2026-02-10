@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from './client';
-import { mapOfferResponseToOffer, mapOrderResponseToOrder } from './mappers';
+import { mapOfferResponseToOffer, mapOrderResponseToOrder, MediaTypeMap, PricingModelMap } from './mappers';
 import type { Offer, Order } from '@/data/mockData';
 import { toast } from '@/hooks/use-toast';
 
@@ -451,4 +451,94 @@ export function useResendVerification() {
   }, []);
 
   return { resendVerification, loading, error };
+}
+
+/**
+ * Hook pre aktualizáciu ponuky
+ */
+export function useUpdateOffer() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const updateOffer = useCallback(async (
+    offerId: string,
+    data: {
+      title: string;
+      mediaType: 'online' | 'rádio' | 'OOH' | 'print' | 'sociální sítě' | 'video' | 'influenceři';
+      format?: string;
+      description: string;
+      pricingType: 'unit' | 'cpt';
+      pricePerUnit?: number;
+      cpt?: number;
+      minOrderValue?: number;
+      discountPercent: number;
+      tags: { 'akce'?: boolean; 'speciál'?: boolean; 'last-minute'?: boolean };
+      validFrom: string;
+      validTo: string;
+      deadline?: string;
+      lastOrderDate?: string;
+      technicalConditionsText?: string;
+      technicalConditionsUrl?: string;
+    }
+  ) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Konvertuj tags na flags enum
+      let tagsValue = 0;
+      if (data.tags['akce']) tagsValue |= 1;
+      if (data.tags['speciál']) tagsValue |= 2;
+      if (data.tags['last-minute']) tagsValue |= 4;
+
+      // Urči pricing model podľa vybraného typu
+      const pricingModel = data.pricingType === 'unit' ? PricingModelMap.unit : PricingModelMap.cpt;
+
+      // Konvertuj dátumy
+      const deadlineDate = data.deadline || null;
+      const lastOrderDate = data.lastOrderDate || null;
+
+      const response = await apiClient.offers.updateOffer({
+        id: offerId,
+        requestBody: {
+          title: data.title.trim(),
+          mediaType: MediaTypeMap[data.mediaType] || 0,
+          format: data.format?.trim() || null,
+          description: data.description.trim(),
+          pricingModel,
+          unitPrice: data.pricingType === 'unit' ? (data.pricePerUnit || null) : null,
+          cpt: data.pricingType === 'cpt' ? (data.cpt || null) : null,
+          minOrderValue: data.minOrderValue || null,
+          discountPercent: data.discountPercent || 0,
+          tags: tagsValue as any,
+          deadlineAssetsAt: deadlineDate,
+          lastOrderDay: lastOrderDate,
+          validFrom: data.validFrom,
+          validTo: data.validTo,
+          technicalConditionsText: data.technicalConditionsText?.trim() || null,
+          technicalConditionsUrl: data.technicalConditionsUrl?.trim() || null,
+        },
+      });
+
+      toast({
+        title: 'Úspěch',
+        description: 'Nabídka byla úspěšně aktualizována',
+      });
+
+      return mapOfferResponseToOffer(response);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Nepodařilo se aktualizovat nabídku');
+      setError(error);
+      toast({
+        title: 'Chyba',
+        description: error.message,
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { updateOffer, loading, error };
 }

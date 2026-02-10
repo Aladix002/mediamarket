@@ -10,10 +10,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { OrderStatus } from '@/data/mockData';
 import { useApp } from '@/contexts/AppContext';
 import EmptyState from '@/components/EmptyState';
-import { Plus, Edit, Archive, FileText, Inbox, ExternalLink, Loader2, Download } from 'lucide-react';
+import { Plus, Edit, FileText, Inbox, ExternalLink, Loader2, Download, Trash2 } from 'lucide-react';
 import { useOffers, useOrders, useUpdateOrderStatus } from '@/api/hooks';
 
 const MediaDashboard = () => {
@@ -157,19 +163,46 @@ const MediaDashboard = () => {
                         {formatPrice(offer.priceFrom)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" title="Upravit">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" title="Archivovat">
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                          <Link to={`/offers/${offer.id}`}>
-                            <Button variant="ghost" size="icon" title="Zobrazit">
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        </div>
+                        <TooltipProvider delayDuration={0}>
+                          <div className="flex justify-end gap-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => navigate(`/media/offers/${offer.id}/edit`)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Upravit</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Smazat</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link to={`/offers/${offer.id}`}>
+                                  <Button variant="ghost" size="icon">
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Zobrazit</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}

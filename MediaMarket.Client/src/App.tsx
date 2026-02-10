@@ -14,6 +14,7 @@ import RegisterPage from "./pages/RegisterPage";
 import AgencyDashboard from "./pages/AgencyDashboard";
 import MediaDashboard from "./pages/MediaDashboard";
 import AddOffer from "./pages/AddOffer";
+import EditOffer from "./pages/EditOffer";
 import AdminDashboard from "./pages/AdminDashboard";
 import TermsPage from "./pages/TermsPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -81,6 +82,7 @@ const App = () => (
                 <Route path="/agency" element={<AgencyDashboard />} />
                 <Route path="/media" element={<MediaDashboard />} />
                 <Route path="/media/offers/new" element={<AddOffer />} />
+                <Route path="/media/offers/:id/edit" element={<EditOffer />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                           <Route path="/profile" element={<ProfilePage />} />
                           <Route path="/verify-email" element={<VerifyEmailPage />} />
