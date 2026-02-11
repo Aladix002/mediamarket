@@ -17,6 +17,10 @@ import AddOffer from "./pages/AddOffer";
 import EditOffer from "./pages/EditOffer";
 import AdminDashboard from "./pages/AdminDashboard";
 import TermsPage from "./pages/TermsPage";
+import AgencyRulesPage from "./pages/AgencyRulesPage";
+import MediaRulesPage from "./pages/MediaRulesPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import CookiesPage from "./pages/CookiesPage";
 import ProfilePage from "./pages/ProfilePage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -89,6 +93,10 @@ const App = () => (
                           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                           <Route path="/reset-password" element={<ResetPasswordPage />} />
                           <Route path="/terms" element={<TermsPage />} />
+                          <Route path="/agency-rules" element={<AgencyRulesPage />} />
+                          <Route path="/media-rules" element={<MediaRulesPage />} />
+                          <Route path="/privacy" element={<PrivacyPage />} />
+                          <Route path="/cookies" element={<CookiesPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>

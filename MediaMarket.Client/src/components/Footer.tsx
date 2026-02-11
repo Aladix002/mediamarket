@@ -12,12 +12,21 @@ const Footer = () => {
             <span className="font-display font-semibold text-foreground">MediaMarket</span>
           </div>
 
-          <nav className="flex items-center gap-6 text-sm text-muted-foreground">
+          <nav className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-sm text-muted-foreground">
             <Link to="/terms" className="hover:text-primary transition-colors">
               Obchodní podmínky
             </Link>
+            <Link to="/agency-rules" className="hover:text-primary transition-colors">
+              Pravidla pro Agentury
+            </Link>
+            <Link to="/media-rules" className="hover:text-primary transition-colors">
+              Pravidla pro Média
+            </Link>
             <Link to="/privacy" className="hover:text-primary transition-colors">
               Ochrana soukromí
+            </Link>
+            <Link to="/cookies" className="hover:text-primary transition-colors">
+              Cookies
             </Link>
             <a href="mailto:info@mediamarket.cz" className="hover:text-primary transition-colors">
               Kontakt
